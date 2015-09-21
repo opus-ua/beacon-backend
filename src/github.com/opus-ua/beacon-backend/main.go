@@ -13,7 +13,8 @@ import (
 var version string = "0.0.0"
 
 var (
-    port    uint
+    port        uint
+    showVersion bool
 )
 
 type VersionInfo struct {
@@ -33,13 +34,9 @@ func ErrorJSON(w http.ResponseWriter, s string, code int) {
 func init() {
     flag.UintVar(&port, "port", 8765, "the app will listen on this port")
     flag.UintVar(&port, "p", 8765, "the app will listen on this port")
+    flag.BoolVar(&showVersion, "version", false, "show version information")
 
     flag.Parse()
-
-    log.Printf("Listening on port %d.\n", port)
-
-    cores := runtime.NumCPU()
-    log.Printf("Core Count: %d", cores)
 }
 
 func HandleVersion(w http.ResponseWriter, r *http.Request) {
@@ -56,10 +53,22 @@ func HandleVersion(w http.ResponseWriter, r *http.Request) {
 }
 
 func StartServer() {
+    log.Printf("Listening on port %d.\n", port)
+    cores := runtime.NumCPU()
+    log.Printf("Core Count: %d", cores)
+
     http.HandleFunc("/version", HandleVersion)
     http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 }
 
+func PrintVersion() {
+    fmt.Printf("Version %s.\n", version)
+}
+
 func main() {
-    StartServer()
+    if showVersion {
+        PrintVersion()
+    } else {
+        StartServer()
+    }
 }
