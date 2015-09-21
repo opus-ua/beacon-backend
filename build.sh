@@ -8,5 +8,7 @@ else
     VERSION_NUMBER=0.0.0
 fi
 
-go install -v -ldflags "-X main.version=$VERSION_NUMBER" github.com/opus-ua/beacon-backend
+HASH=$(git rev-parse HEAD)
+LDFLAGS="-X main.version=$VERSION_NUMBER -X main.gitHash=$HASH"
+go install -v -ldflags "$LDFLAGS"  github.com/opus-ua/beacon-backend
 go test github.com/opus-ua/beacon-backend -v

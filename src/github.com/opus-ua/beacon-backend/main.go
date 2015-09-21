@@ -14,11 +14,13 @@ var version string = "0.0.0"
 
 var (
     port        uint
+    gitHash     string
     showVersion bool
 )
 
 type VersionInfo struct {
     Number  string  `json:"version"`
+    Hash    string  `json:"hash"`
 }
 
 type JSONError struct {
@@ -41,7 +43,7 @@ func init() {
 
 func HandleVersion(w http.ResponseWriter, r *http.Request) {
     if r.Method == "GET" {
-        versionJSON, err := json.Marshal(VersionInfo{Number: version})
+        versionJSON, err := json.Marshal(VersionInfo{Number: version, Hash: gitHash})
         if err != nil {
             ErrorJSON(w, "Could not retrieve version number.", http.StatusInternalServerError)
         } else {
@@ -62,7 +64,8 @@ func StartServer() {
 }
 
 func PrintVersion() {
-    fmt.Printf("Version %s.\n", version)
+    fmt.Printf("Version: %s\n", version)
+    fmt.Printf("Git Hash: %s\n", gitHash)
 }
 
 func main() {
