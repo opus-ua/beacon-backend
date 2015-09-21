@@ -1,4 +1,4 @@
-package main
+package beacon
 
 import (
     "io"
@@ -10,7 +10,7 @@ import (
     "encoding/json"
 )
 
-var version string
+var version string = "0.0.0"
 
 var (
     port    uint
@@ -42,7 +42,7 @@ func init() {
     log.Printf("Core Count: %d", cores)
 }
 
-func hello(w http.ResponseWriter, r *http.Request) {
+func HandleVersion(w http.ResponseWriter, r *http.Request) {
     if r.Method == "GET" {
         versionJSON, err := json.Marshal(VersionInfo{Number: version})
         if err != nil {
@@ -55,8 +55,11 @@ func hello(w http.ResponseWriter, r *http.Request) {
     }
 }
 
-func main() {
-
-    http.HandleFunc("/version", hello)
+func StartServer() {
+    http.HandleFunc("/version", HandleVersion)
     http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+}
+
+func main() {
+    StartServer()
 }
