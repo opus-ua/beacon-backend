@@ -31,8 +31,8 @@ func ErrorJSON(w http.ResponseWriter, s string, code int) {
 }
 
 func init() {
-    flag.UintVar(&port, "port", 8080, "the app will listen on this port")
-    flag.UintVar(&port, "p", 8080, "the app will listen on this port")
+    flag.UintVar(&port, "port", 8765, "the app will listen on this port")
+    flag.UintVar(&port, "p", 8765, "the app will listen on this port")
 
     flag.Parse()
 

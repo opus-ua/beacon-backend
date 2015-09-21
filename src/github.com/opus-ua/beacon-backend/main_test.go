@@ -11,7 +11,7 @@ import (
 func TestGetVersion(t *testing.T) {
     go StartServer()
     time.Sleep(50 * time.Millisecond)
-    resp, err := http.Get("http://localhost:8080/version")
+    resp, err := http.Get("http://localhost:8765/version")
     if err != nil {
         t.Fatalf("Could not connect to beacon backend.")
     }
