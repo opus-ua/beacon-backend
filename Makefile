@@ -14,6 +14,15 @@ install:
 	systemctl enable beacon
 	systemctl start beacon
 
+.PHONY: package
+package:
+	mkdir -p ./beacon
+	cp ./bin/beacon-backend ./beacon/beacon
+	cp ./tools/beacon.service ./beacon/beacon.service
+	cp ./tools/install.sh beacon/install.sh
+	tar czf ./bin/beacon.tar.gz ./beacon
+	rm -rf ./beacon
+
 .PHONY: clean
 clean:
 	rm -rf bin
