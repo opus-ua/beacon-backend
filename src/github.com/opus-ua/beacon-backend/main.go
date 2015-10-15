@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	. "github.com/opus-ua/beacon-post"
+	"gopkg.in/redis.v3"
 	"io"
 	"log"
 	"net/http"
@@ -11,6 +13,7 @@ import (
 )
 
 var version string = "0.0.0"
+var DEFAULT_PORT uint = 8765
 
 var (
 	port        uint
@@ -34,14 +37,16 @@ func ErrorJSON(w http.ResponseWriter, s string, code int) {
 }
 
 func init() {
-	flag.UintVar(&port, "port", 8765, "the app will listen on this port")
-	flag.UintVar(&port, "p", 8765, "the app will listen on this port")
+	flag.UintVar(&port, "port", DEFAULT_PORT, "the app will listen on this port")
+	flag.UintVar(&port, "p", DEFAULT_PORT, "the app will listen on this port")
 	flag.BoolVar(&showVersion, "version", false, "show version information")
 
 	flag.Parse()
 }
 
 func HandleVersion(w http.ResponseWriter, r *http.Request) {
+	msg := fmt.Sprintf("Received version request from %s.\n", r.RemoteAddr)
+	log.Printf(msg)
 	switch r.Method {
 	case "GET":
 		versionJSON, err := json.Marshal(VersionInfo{Number: version, Hash: gitHash})
@@ -62,7 +67,13 @@ func StartServer() {
 	log.Printf("Core Count: %d", cores)
 
 	http.HandleFunc("/version", HandleVersion)
-	http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+    err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+    if err != nil {
+        if port == DEFAULT_PORT {
+            log.Printf("Is an instance of Beacon already running?\n")
+        }
+        log.Fatal(err.Error())
+    }
 }
 
 func PrintVersion() {
@@ -71,6 +82,30 @@ func PrintVersion() {
 }
 
 func main() {
+	fmt.Printf("Writing post to redis.\n")
+	p := BeaconPost{
+		ID:          12345,
+		Image:       []byte("abcde"),
+		Location:    Geotag{Latitude: 45.0, Longitude: 45.0},
+		PosterID:    54321,
+		Description: "Some stuff.",
+		Hearts:      5,
+		Flags:       0,
+	}
+	client := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       0,
+	})
+    commentA := Comment{
+        PosterID: 54321,
+        BeaconID: p.ID,
+        Text: "This is moss def some stuff.",
+        Hearts: 1,
+        Flags: 0,
+    }
+    commentA.Add(client)
+	p.Add(client)
 	if showVersion {
 		PrintVersion()
 	} else {

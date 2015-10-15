@@ -13,7 +13,7 @@ HASH=$(git rev-parse HEAD)
 LDFLAGS="-X main.version=$VERSION_NUMBER -X main.gitHash=$HASH"
 
 rm -f bin/*
-go fmt src/github.com/opus-ua/beacon-backend/*
+go get gopkg.in/redis.v3
 go install -v -ldflags "$LDFLAGS"  github.com/opus-ua/beacon-backend
 go test github.com/opus-ua/beacon-backend -v
 

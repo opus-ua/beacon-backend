@@ -9,10 +9,14 @@ bin/beacon-backend: $(SRC)
 .PHONY: install
 install:
 	cp ./bin/beacon-backend /usr/bin/beacon
-	cp ./beacon.service /etc/systemd/system/beacon.service
+	cp ./tools/beacon.service /etc/systemd/system/beacon.service
 	systemctl daemon-reload
 	systemctl enable beacon
 	systemctl start beacon
+
+.PHONY: format
+format:
+	go fmt src/github.com/opus-ua/beacon-backend/*
 
 .PHONY: package
 package:
