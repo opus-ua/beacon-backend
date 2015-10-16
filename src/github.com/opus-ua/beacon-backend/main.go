@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	. "github.com/opus-ua/beacon-post"
-	"gopkg.in/redis.v3"
 	"io"
 	"log"
 	"net/http"
@@ -82,30 +80,6 @@ func PrintVersion() {
 }
 
 func main() {
-	fmt.Printf("Writing post to redis.\n")
-	p := BeaconPost{
-		ID:          12345,
-		Image:       []byte("abcde"),
-		Location:    Geotag{Latitude: 45.0, Longitude: 45.0},
-		PosterID:    54321,
-		Description: "Some stuff.",
-		Hearts:      5,
-		Flags:       0,
-	}
-	client := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
-		DB:       0,
-	})
-    commentA := Comment{
-        PosterID: 54321,
-        BeaconID: p.ID,
-        Text: "This is moss def some stuff.",
-        Hearts: 1,
-        Flags: 0,
-    }
-    commentA.Add(client)
-	p.Add(client)
 	if showVersion {
 		PrintVersion()
 	} else {

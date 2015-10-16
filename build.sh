@@ -16,5 +16,6 @@ rm -f bin/*
 go get gopkg.in/redis.v3
 go install -v -ldflags "$LDFLAGS"  github.com/opus-ua/beacon-backend
 go test github.com/opus-ua/beacon-backend -v
+go test github.com/opus-ua/beacon-post -v
 
 export GOPATH=$OLDGOPATH
