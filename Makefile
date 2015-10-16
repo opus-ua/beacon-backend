@@ -2,9 +2,20 @@ all: bin/beacon-backend
 
 SRC=$(shell find ./src -name "*.go")
 
-bin/beacon-backend: $(SRC)
+VERSION_NUMBER=0.0.0
+GOPATH:=$(GOPATH):`pwd`
+HASH:=$(shell git rev-parse HEAD)
+LDFLAGS=-X main.version=$(VERSION_NUMBER) -X main.gitHash=$(HASH)
+
+bin/beacon-backend: $(SRC) test
 	mkdir -p bin
-	./build.sh
+	GOPATH=$(GOPATH) go get gopkg.in/redis.v3
+	GOPATH=$(GOPATH) go install -v -ldflags "$(LDFLAGS)"  github.com/opus-ua/beacon-backend
+
+.PHONY: test
+test:
+	GOPATH=$(GOPATH) go test github.com/opus-ua/beacon-backend -v
+	GOPATH=$(GOPATH) go test github.com/opus-ua/beacon-post -v
 
 .PHONY: install
 install:
@@ -16,7 +27,7 @@ install:
 
 .PHONY: format
 format:
-	go fmt src/github.com/opus-ua/beacon-backend/*
+	GOPATH=$(GOPATH) go fmt src/github.com/opus-ua/beacon-backend/*
 
 .PHONY: package
 package:
