@@ -1,4 +1,4 @@
-package beaconpost
+package beacondb
 
 import (
     "gopkg.in/redis.v3"
@@ -6,6 +6,7 @@ import (
     "fmt"
     "os"
     "reflect"
+    . "github.com/opus-ua/beacon-post"
 )
 
 var client *redis.Client = nil
@@ -51,7 +52,7 @@ var p BeaconPost = BeaconPost{
 }
 
 func TestAddBeacon(t *testing.T) {
-    p.Add(client)
+    AddBeacon(&p, client)
     key := fmt.Sprintf("p:%d", p.ID)
     RedisExpect(client.HGet(key, "img"), "abcde", t)
     RedisExpect(client.HGet(key, "loc"), "\x00\x00\x00\x00\x00\x80F@\x00\x00\x00\x00\x00\x80F@", t)
@@ -80,8 +81,8 @@ var commentB Comment = Comment{
 }
 
 func TestAddComment(t *testing.T) {
-   commentA.Add(client)
-   commentB.Add(client)
+   AddComment(&commentA, client)
+   AddComment(&commentB, client)
    commentListKey := "p:1:c"
    res, err := client.LRange(commentListKey, 0, -1).Result()
    if err != nil {
