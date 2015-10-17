@@ -1,4 +1,4 @@
-all: bin/beacon-backend
+all: bin/beacon-backend test
 
 SRC=$(shell find ./src -name "*.go")
 
@@ -7,7 +7,7 @@ GOPATH:=$(GOPATH):`pwd`
 HASH:=$(shell git rev-parse HEAD)
 LDFLAGS=-X main.version=$(VERSION_NUMBER) -X main.gitHash=$(HASH)
 
-bin/beacon-backend: $(SRC) test
+bin/beacon-backend: $(SRC)
 	mkdir -p bin
 	GOPATH=$(GOPATH) go get gopkg.in/redis.v3
 	GOPATH=$(GOPATH) go install -v -ldflags "$(LDFLAGS)"  github.com/opus-ua/beacon-backend

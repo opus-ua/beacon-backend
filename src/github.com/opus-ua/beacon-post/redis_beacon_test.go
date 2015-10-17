@@ -35,15 +35,22 @@ func RedisExpect(res *redis.StringCmd, expected string, t *testing.T) {
     }
 }
 
-func TestAddBeacon(t *testing.T) {
-    p := BeaconPost{
-        Image: []byte("abcde"),
-        Location: Geotag{Latitude: 45.0, Longitude: 45.0},
-        PosterID: 54321,
-        Description: "Go go Redis!",
-        Hearts: 5,
-        Flags: 1,
+func RedisNotNil(res *redis.StringCmd, t *testing.T) {
+    if res.Err() != nil {
+        t.Fatalf(res.Err().Error())
     }
+}
+
+var p BeaconPost = BeaconPost{
+    Image: []byte("abcde"),
+    Location: Geotag{Latitude: 45.0, Longitude: 45.0},
+    PosterID: 54321,
+    Description: "Go go Redis!",
+    Hearts: 5,
+    Flags: 1,
+}
+
+func TestAddBeacon(t *testing.T) {
     p.Add(client)
     key := fmt.Sprintf("p:%d", p.ID)
     RedisExpect(client.HGet(key, "img"), "abcde", t)
@@ -53,28 +60,29 @@ func TestAddBeacon(t *testing.T) {
     RedisExpect(client.HGet(key, "hearts"), "5", t)
     RedisExpect(client.HGet(key, "flags"), "1", t)
     RedisExpect(client.HGet(key, "type"), "beacon", t)
+    RedisNotNil(client.HGet(key, "time"), t)
+}
+
+var commentA Comment = Comment{
+    PosterID: 54321,
+    BeaconID: 1,
+    Text: "For real. This is stuff.",
+    Hearts: 1,
+    Flags: 0,
+}
+
+var commentB Comment = Comment{
+    PosterID: 626,
+    BeaconID: 1,
+    Text: "Reed sucks.",
+    Hearts: 0,
+    Flags: 27,
 }
 
 func TestAddComment(t *testing.T) {
-    postIDSigned, _ := client.Get("post-count").Int64()
-    postID := uint64(postIDSigned)
-    commentA := Comment{
-        PosterID: 54321,
-        BeaconID: postID,
-        Text: "For real. This is stuff.",
-        Hearts: 1,
-        Flags: 0,
-    }
-    commentB := Comment{
-        PosterID: 626,
-        BeaconID: postID,
-        Text: "Reed sucks.",
-        Hearts: 0,
-        Flags: 27,
-   }
    commentA.Add(client)
    commentB.Add(client)
-   commentListKey := fmt.Sprintf("p:%d:c", postID)
+   commentListKey := "p:1:c"
    res, err := client.LRange(commentListKey, 0, -1).Result()
    if err != nil {
         t.Fatalf(err.Error())
@@ -89,6 +97,7 @@ func TestAddComment(t *testing.T) {
    RedisExpect(client.HGet(key, "hearts"), "1", t)
    RedisExpect(client.HGet(key, "flags"), "0", t)
    RedisExpect(client.HGet(key, "type"), "comment", t)
+   RedisNotNil(client.HGet(key, "time"), t)
    key = fmt.Sprintf("p:%d", commentB.ID)
    RedisExpect(client.HGet(key, "poster"), "he", t)
    RedisExpect(client.HGet(key, "parent"), "1", t)
@@ -96,4 +105,21 @@ func TestAddComment(t *testing.T) {
    RedisExpect(client.HGet(key, "hearts"), "0", t)
    RedisExpect(client.HGet(key, "flags"), "r", t)
    RedisExpect(client.HGet(key, "type"), "comment", t)
+   RedisNotNil(client.HGet(key, "time"), t)
+}
+
+func TestGetBeacon(t *testing.T) {
+    post, err := GetBeaconRedis(1, client)
+    if err != nil {
+        t.Fatalf(err.Error())
+    }
+    commentA.Time = post.Comments[0].Time
+    commentB.Time = post.Comments[1].Time
+    p.Time = post.Time
+    p.Comments = []Comment{commentA, commentB}
+    if !reflect.DeepEqual(p, post) {
+        fmt.Printf("Stored:\n%v\n", p)
+        fmt.Printf("Retrieved:\n%v\n", post)
+        t.Fatalf("Retrieved beacon not same as stored beacon.")
+    }
 }
