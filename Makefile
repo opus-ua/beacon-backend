@@ -28,6 +28,8 @@ install:
 .PHONY: format
 format:
 	GOPATH=$(GOPATH) go fmt src/github.com/opus-ua/beacon-backend/*
+	GOPATH=$(GOPATH) go fmt src/github.com/opus-ua/beacon-post/*
+	GOPATH=$(GOPATH) go fmt src/github.com/opus-ua/beacon-db/*
 
 .PHONY: package
 package:

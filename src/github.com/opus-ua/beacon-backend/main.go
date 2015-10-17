@@ -65,13 +65,13 @@ func StartServer() {
 	log.Printf("Core Count: %d", cores)
 
 	http.HandleFunc("/version", HandleVersion)
-    err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
-    if err != nil {
-        if port == DEFAULT_PORT {
-            log.Printf("Is an instance of Beacon already running?\n")
-        }
-        log.Fatal(err.Error())
-    }
+	err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+	if err != nil {
+		if port == DEFAULT_PORT {
+			log.Printf("Is an instance of Beacon already running?\n")
+		}
+		log.Fatal(err.Error())
+	}
 }
 
 func PrintVersion() {
