@@ -6,6 +6,7 @@ import (
     "fmt"
     "strconv"
     "errors"
+    "encoding"
     . "github.com/opus-ua/beacon-post"
 )
 
@@ -14,7 +15,15 @@ const (
    REDIS_INT_BASE = 36
 )
 
-func GetBeacon(id uint64, client *redis.Client) (BeaconPost, error) {
+func GetRedisPostKey(id uint64) string {
+    return fmt.Sprintf("p:%d", id)
+}
+
+func GetRedisCommentListKey(id uint64) string {
+    return fmt.Sprintf("%s:c", GetRedisPostKey(id))
+}
+
+func GetBeacon(id uint64, client *redis.Client) (Beacon, error) {
     if post, err := GetBeaconRedis(id, client); err == nil {
         return post, nil
     }
@@ -23,103 +32,132 @@ func GetBeacon(id uint64, client *redis.Client) (BeaconPost, error) {
         return post, nil
     }
     */
-    return BeaconPost{}, nil
+    return Beacon{}, nil
 }
 
-func GetBeaconRedis(id uint64, client *redis.Client) (BeaconPost, error) {
-    key := fmt.Sprintf("p:%d", id)
+func RedisParseUInt64(res string, err error) (uint64, error) {
+   if err != nil {
+        return 0, err
+   }
+   valSigned, err := strconv.ParseInt(res, REDIS_INT_BASE, 64)
+   return uint64(valSigned), err
+}
+
+func RedisParseUInt32(res string, err error) (uint32, error) {
+   if err != nil {
+        return 0, err
+   }
+   val64, err := strconv.ParseInt(res, REDIS_INT_BASE, 64)
+   return uint32(val64), err
+}
+
+func RedisParseText(res string, obj encoding.TextUnmarshaler, err error) error {
+   if err != nil {
+        return err
+   }
+   err = obj.UnmarshalText([]byte(res)) 
+   return err
+}
+
+func RedisParseBinary(res string, obj encoding.BinaryUnmarshaler, err error) error {
+   if err != nil {
+        return err
+   }
+   err = obj.UnmarshalBinary([]byte(res))
+   return err
+}
+
+func GetBeaconOnlyRedis(id uint64, client *redis.Client) (Beacon, error) {
+    key := GetRedisPostKey(id)
     res, err := client.HGetAllMap(key).Result()
-    if err != nil {
-        return BeaconPost{}, err
-    }
     var geotag Geotag
-    err = geotag.UnmarshalBinary([]byte(res["loc"]))
+    var timePosted time.Time
+    err = RedisParseBinary(res["loc"], &geotag, err)
+    err = RedisParseText(res["time"], &timePosted, err)
+    poster, err := RedisParseUInt64(res["poster"], err)
+    hearts, err := RedisParseUInt32(res["hearts"], err)
+    flags, err := RedisParseUInt32(res["flags"], err)
     if err != nil {
-        return BeaconPost{}, err
+        return Beacon{}, err
     }
-    poster, err := strconv.ParseInt(res["poster"], REDIS_INT_BASE, 64)
-    posteru := uint64(poster)
-    if err != nil {
-        return BeaconPost{}, err
-    }
-    hearts64, err := strconv.ParseInt(res["hearts"], REDIS_INT_BASE, 64)
-    if err != nil {
-        return BeaconPost{}, err
-    }
-    hearts := uint32(hearts64)
-    flags64, err := strconv.ParseInt(res["flags"], REDIS_INT_BASE, 64)
-    if err != nil {
-        return BeaconPost{}, err
-    }
-    flags := uint32(flags64)
-    timeText := []byte(res["time"])
-    postTime := time.Time{}
-    if err = postTime.UnmarshalText(timeText); err != nil {
-        return BeaconPost{}, err
-    }
-    post := BeaconPost{
+    post := Beacon{
         ID: id,
         Image: []byte(res["img"]),
         Location: geotag,
-        PosterID: posteru,
+        PosterID: poster,
         Description: res["desc"],
         Hearts: hearts,
         Flags: flags,
-        Time: postTime,
+        Time: timePosted,
     }
-    commListKey := fmt.Sprintf("p:%d:c", id)
-    comments, err := client.LRange(commListKey, 0, -1).Result()
+    return post, nil
+}
+
+func GetCommentRedis(id uint64, parent uint64, client *redis.Client) (Comment, error) {
+    commentKey := GetRedisPostKey(id)
+    commHash, err := client.HGetAllMap(commentKey).Result()
+    var commentTime time.Time
+    err = RedisParseText(commHash["time"], &commentTime, err)
+    poster, err := RedisParseUInt64(commHash["poster"], err)
+    hearts, err := RedisParseUInt32(commHash["hearts"], err)
+    flags, err := RedisParseUInt32(commHash["flags"], err)
+    if err != nil {
+        return Comment{}, err
+    }
+    comment := Comment{
+        ID: id,
+        PosterID: poster,
+        BeaconID: parent,
+        Text: commHash["text"],
+        Hearts: hearts,
+        Flags: flags,
+        Time: commentTime,
+    }
+    return comment, nil
+}
+
+func GetRedisCommentList(id uint64, client *redis.Client) ([]uint64, error) {
+    key := GetRedisCommentListKey(id)
+    strList, err := client.LRange(key, 0, -1).Result()
+    if err != nil {
+        return []uint64{}, err
+    }
+    intList := []uint64{}
+    for _, str := range strList {
+        commID, err := RedisParseUInt64(str, nil) 
+        if err != nil {
+            return intList, err
+        }
+        intList = append(intList, commID)
+    }
+    return intList, nil
+}
+
+func GetBeaconRedis(id uint64, client *redis.Client) (Beacon, error) {
+    post, err := GetBeaconOnlyRedis(id, client)
+    if err != nil {
+        return Beacon{}, err
+    }
+    comments, err := GetRedisCommentList(id, client)
+    if err != nil {
+        return Beacon{}, err
+    }
     for _, commentID := range comments {
-        commentKey := fmt.Sprintf("p:%s", commentID)
-        commentIDSigned, err := strconv.ParseInt(commentID, REDIS_INT_BASE, 64)
+        comment, err := GetCommentRedis(commentID, id, client)
         if err != nil {
-            return BeaconPost{}, nil
-        }
-        commentIDInt := uint64(commentIDSigned)
-        commHash, err := client.HGetAllMap(commentKey).Result()
-        if err != nil {
-            return BeaconPost{}, err
-        }
-        posterSigned, err := strconv.ParseInt(commHash["poster"], REDIS_INT_BASE, 64)
-        if err != nil {
-            return BeaconPost{}, err
-        }
-        poster := uint64(posterSigned)
-        parent := id
-        hearts64, err = strconv.ParseInt(commHash["hearts"], REDIS_INT_BASE, 64)
-        if err != nil {
-            return BeaconPost{}, err
-        }
-        hearts := uint32(hearts64)
-        if flags64, err = strconv.ParseInt(commHash["flags"], REDIS_INT_BASE, 64); err != nil {
-            return BeaconPost{}, err
-        }
-        flags := uint32(flags64)
-        timeText = []byte(res["time"])
-        commentTime := time.Time{}
-        if err = commentTime.UnmarshalText(timeText); err != nil {
-            return BeaconPost{}, err
-        }
-        comment := Comment{
-            ID: commentIDInt,
-            PosterID: poster,
-            BeaconID: parent,
-            Text: commHash["text"],
-            Hearts: hearts,
-            Flags: flags,
-            Time: commentTime,
+            return Beacon{}, err
         }
         post.Comments = append(post.Comments, comment)
     }
     return post, nil
 }
 
-func AddBeacon(post *BeaconPost, client *redis.Client) {
+func AddBeacon(post *Beacon, client *redis.Client) {
    AddBeaconRedis(post, client)
    // post.AddPostGres()
 }
 
-func AddBeaconRedis(post *BeaconPost, client *redis.Client) error {
+func AddBeaconRedis(post *Beacon, client *redis.Client) error {
     postID, err := client.Incr("post-count").Result()
     if postID < 0 {
         return errors.New("Retrieved post count was negative.")
@@ -128,7 +166,7 @@ func AddBeaconRedis(post *BeaconPost, client *redis.Client) error {
     if err != nil {
         return err
     }
-    key := fmt.Sprintf("p:%d", post.ID)
+    key := GetRedisPostKey(post.ID)
     locBytes, _ := post.Location.MarshalBinary()
     locString := string(locBytes[:])
     nowb, _ := time.Now().MarshalText()
@@ -160,10 +198,10 @@ func AddCommentRedis(comment *Comment, client *redis.Client) error {
     if err != nil {
         return err
     }
-    beaconKey := fmt.Sprintf("p:%d", comment.BeaconID)
-    IDKey := fmt.Sprintf("p:%d:c", comment.BeaconID)
+    beaconKey := GetRedisPostKey(comment.BeaconID)
+    IDKey := GetRedisCommentListKey(comment.BeaconID)
     client.RPush(IDKey, strconv.FormatUint(comment.ID, REDIS_INT_BASE))
-    commKey := fmt.Sprintf("p:%d", comment.ID)
+    commKey := GetRedisPostKey(comment.ID)
     nowb, _ := time.Now().MarshalText()
     now := string(nowb)
     client.HMSet(commKey, "poster", strconv.FormatUint(comment.PosterID, REDIS_INT_BASE),

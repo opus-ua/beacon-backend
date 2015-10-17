@@ -4,7 +4,7 @@ import (
     "time"
 )
 
-type BeaconPost struct {
+type Beacon struct {
     ID          uint64
     Image       []byte
     Location    Geotag

@@ -42,7 +42,7 @@ func RedisNotNil(res *redis.StringCmd, t *testing.T) {
     }
 }
 
-var p BeaconPost = BeaconPost{
+var p Beacon = Beacon{
     Image: []byte("abcde"),
     Location: Geotag{Latitude: 45.0, Longitude: 45.0},
     PosterID: 54321,
@@ -89,7 +89,8 @@ func TestAddComment(t *testing.T) {
         t.Fatalf(err.Error())
    }
    if !reflect.DeepEqual(res, []string{"2", "3"}) {
-        t.Fatalf("Comment list was not correct.")
+       fmt.Printf("Expected: ['2', '3']\nRetrieved: %v", res)
+       t.Fatalf("Comment list was not correct.")
    }
    key := fmt.Sprintf("p:%d", commentA.ID)
    RedisExpect(client.HGet(key, "poster"), "15wx", t)
