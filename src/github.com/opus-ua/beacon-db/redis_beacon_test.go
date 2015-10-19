@@ -6,6 +6,7 @@ import (
 	"gopkg.in/redis.v3"
 	"os"
 	"reflect"
+	"strconv"
 	"testing"
 )
 
@@ -123,5 +124,18 @@ func TestGetBeacon(t *testing.T) {
 		fmt.Printf("Stored:\n%v\n", p)
 		fmt.Printf("Retrieved:\n%v\n", post)
 		t.Fatalf("Retrieved beacon not same as stored beacon.")
+	}
+}
+
+func BenchmarkAddBeacon(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		p.Description = strconv.Itoa(i)
+		AddBeacon(&p, client)
+	}
+}
+
+func BenchmarkRetrieveBeacon(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		GetBeaconRedis(1, client)
 	}
 }

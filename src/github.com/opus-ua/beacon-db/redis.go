@@ -51,6 +51,13 @@ func RedisParseUInt32(res string, err error) (uint32, error) {
 	return uint32(val64), err
 }
 
+func RedisParseTime(res string, err error) (time.Time, error) {
+	if err != nil {
+		return time.Now(), err
+	}
+	return time.Parse(time.UnixDate, res)
+}
+
 func RedisParseText(res string, obj encoding.TextUnmarshaler, err error) error {
 	if err != nil {
 		return err
@@ -71,9 +78,8 @@ func GetBeaconOnlyRedis(id uint64, client *redis.Client) (Beacon, error) {
 	key := GetRedisPostKey(id)
 	res, err := client.HGetAllMap(key).Result()
 	var geotag Geotag
-	var timePosted time.Time
 	err = RedisParseBinary(res["loc"], &geotag, err)
-	err = RedisParseText(res["time"], &timePosted, err)
+	timePosted, err := RedisParseTime(res["time"], err)
 	poster, err := RedisParseUInt64(res["poster"], err)
 	hearts, err := RedisParseUInt32(res["hearts"], err)
 	flags, err := RedisParseUInt32(res["flags"], err)
@@ -96,8 +102,7 @@ func GetBeaconOnlyRedis(id uint64, client *redis.Client) (Beacon, error) {
 func GetCommentRedis(id uint64, parent uint64, client *redis.Client) (Comment, error) {
 	commentKey := GetRedisPostKey(id)
 	commHash, err := client.HGetAllMap(commentKey).Result()
-	var commentTime time.Time
-	err = RedisParseText(commHash["time"], &commentTime, err)
+	commentTime, err := RedisParseTime(commHash["time"], err)
 	poster, err := RedisParseUInt64(commHash["poster"], err)
 	hearts, err := RedisParseUInt32(commHash["hearts"], err)
 	flags, err := RedisParseUInt32(commHash["flags"], err)
@@ -169,8 +174,7 @@ func AddBeaconRedis(post *Beacon, client *redis.Client) error {
 	key := GetRedisPostKey(post.ID)
 	locBytes, _ := post.Location.MarshalBinary()
 	locString := string(locBytes[:])
-	nowb, _ := time.Now().MarshalText()
-	now := string(nowb)
+	now := time.Now().Format(time.UnixDate)
 	client.HMSet(key, "img", string(post.Image[:]),
 		"loc", locString,
 		"poster", strconv.FormatUint(post.PosterID, REDIS_INT_BASE),
@@ -202,8 +206,7 @@ func AddCommentRedis(comment *Comment, client *redis.Client) error {
 	IDKey := GetRedisCommentListKey(comment.BeaconID)
 	client.RPush(IDKey, strconv.FormatUint(comment.ID, REDIS_INT_BASE))
 	commKey := GetRedisPostKey(comment.ID)
-	nowb, _ := time.Now().MarshalText()
-	now := string(nowb)
+	now := time.Now().Format(time.UnixDate)
 	client.HMSet(commKey, "poster", strconv.FormatUint(comment.PosterID, REDIS_INT_BASE),
 		"parent", strconv.FormatUint(comment.BeaconID, REDIS_INT_BASE),
 		"text", comment.Text,

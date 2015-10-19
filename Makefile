@@ -14,8 +14,8 @@ bin/beacon-backend: $(SRC)
 
 .PHONY: test
 test:
-	GOPATH=$(GOPATH) go test github.com/opus-ua/beacon-backend -v
-	GOPATH=$(GOPATH) go test github.com/opus-ua/beacon-db -v
+	GOPATH=$(GOPATH) go test github.com/opus-ua/beacon-backend -v --bench .
+	GOPATH=$(GOPATH) go test github.com/opus-ua/beacon-db -v --bench .
 
 .PHONY: install
 install:
