@@ -53,7 +53,10 @@ var p Beacon = Beacon{
 }
 
 func TestAddBeacon(t *testing.T) {
-	AddBeacon(&p, client)
+    err := AddBeacon(&p, client)
+    if err != nil {
+        t.Fatalf(err.Error())
+    }
 	key := fmt.Sprintf("p:%d", p.ID)
 	RedisExpect(client.HGet(key, "img"), "abcde", t)
 	RedisExpect(client.HGet(key, "loc"), "\x00\x00\x00\x00\x00\x80F@\x00\x00\x00\x00\x00\x80F@", t)

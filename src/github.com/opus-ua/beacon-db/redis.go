@@ -157,9 +157,10 @@ func GetBeaconRedis(id uint64, client *redis.Client) (Beacon, error) {
 	return post, nil
 }
 
-func AddBeacon(post *Beacon, client *redis.Client) {
-	AddBeaconRedis(post, client)
+func AddBeacon(post *Beacon, client *redis.Client) error {
+    err := AddBeaconRedis(post, client)
 	// post.AddPostGres()
+    return err
 }
 
 func AddBeaconRedis(post *Beacon, client *redis.Client) error {
