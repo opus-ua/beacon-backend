@@ -96,7 +96,7 @@ func HandlePostBeacon(w http.ResponseWriter, r *http.Request, client *redis.Clie
     log.Printf("Posting")
     post.Image = img
     log.Printf("Successfully deserialized beacon.")
-    err = AddBeacon(&post, client)
+    _, err = AddBeacon(&post, client)
     if err != nil {
         msg := fmt.Sprintf("Database error for connection to %s: %s", ip, err.Error())
         http.Error(w, "{\"error\": \"Database error.\"}", 500)

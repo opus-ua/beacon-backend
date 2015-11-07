@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	. "github.com/opus-ua/beacon-rest"
+	"gopkg.in/redis.v3"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"runtime"
-    "gopkg.in/redis.v3"
-    . "github.com/opus-ua/beacon-rest"
 )
 
 var version string = "0.0.0"
@@ -19,6 +20,7 @@ var (
 	port        uint
 	gitHash     string
 	showVersion bool
+	devMode     bool
 )
 
 type VersionInfo struct {
@@ -40,6 +42,7 @@ func init() {
 	flag.UintVar(&port, "port", DEFAULT_PORT, "the app will listen on this port")
 	flag.UintVar(&port, "p", DEFAULT_PORT, "the app will listen on this port")
 	flag.BoolVar(&showVersion, "version", false, "show version information")
+	flag.BoolVar(&devMode, "dev", false, "start in dev mode")
 
 	flag.Parse()
 }
@@ -61,22 +64,30 @@ func HandleVersion(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func StartServer() {
+func StartServer(dev bool) {
 	log.Printf("Listening on port %d.\n", port)
 	cores := runtime.NumCPU()
 	log.Printf("Core Count: %d", cores)
 
-    client := redis.NewClient(&redis.Options{
+	client := redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
 		Password: "",
 		DB:       0,
 	})
 
+	if dev {
+        log.Printf("Starting in dev mode.")
+		if err := client.Select(11).Err(); err != nil {
+			log.Printf("Could not select unused dev database.\n")
+			os.Exit(1)
+		}
+	}
+
 	http.HandleFunc("/version", HandleVersion)
-    http.HandleFunc("/beacon", func (w http.ResponseWriter, r *http.Request) {
-        log.Printf("Received beacon post request.\n")
-        HandlePostBeacon(w, r, client)
-    })
+	http.HandleFunc("/beacon", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("Received beacon post request.\n")
+		HandlePostBeacon(w, r, client)
+	})
 	err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 	if err != nil {
 		if port == DEFAULT_PORT {
@@ -95,6 +106,6 @@ func main() {
 	if showVersion {
 		PrintVersion()
 	} else {
-		StartServer()
+		StartServer(devMode)
 	}
 }

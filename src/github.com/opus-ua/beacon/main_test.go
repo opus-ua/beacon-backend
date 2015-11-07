@@ -1,24 +1,24 @@
 package main
 
 import (
+	"bytes"
+	"encoding/hex"
+	"io"
 	"io/ioutil"
+	"mime/multipart"
 	"net/http"
+	"net/textproto"
+	"os"
 	"strings"
 	"testing"
 	"time"
-    "os"
-    "encoding/hex"
-    "mime/multipart"
-    "net/textproto"
-    "bytes"
-    "io"
 )
 
 func TestMain(m *testing.M) {
-	go StartServer()
+	go StartServer(true)
 	time.Sleep(50 * time.Millisecond)
-    res := m.Run()
-    os.Exit(res)
+	res := m.Run()
+	os.Exit(res)
 }
 
 func TestGetVersion(t *testing.T) {
@@ -69,27 +69,31 @@ var jsonData = `
 `
 
 func TestPostBeacon(t *testing.T) {
-   imgData = strings.Replace(imgData, "\n", "", -1)
-   imgBytes, err := hex.DecodeString(imgData)
-   if err != nil {
-        t.Fatalf("Unable to parse image data.")
-   }
-   body := &bytes.Buffer{}
-   partWriter := multipart.NewWriter(body)
-   jsonHeader := textproto.MIMEHeader{}
-   jsonHeader.Add("Content-Type", "application/json")
-   jsonWriter, err := partWriter.CreatePart(jsonHeader)
-   io.WriteString(jsonWriter, jsonData)
-   imgHeader := textproto.MIMEHeader{}
-   imgHeader.Add("Content-Type", "img/jpeg")
-   imgWriter, err := partWriter.CreatePart(imgHeader)
-   imgWriter.Write(imgBytes)
-   partWriter.Close()
-   req, _ := http.NewRequest("POST", "http://localhost:8765/beacon", body)
-   req.Header.Add("Content-Type", partWriter.FormDataContentType())
-   client := &http.Client{}
-   _, err = client.Do(req)
-   if err != nil {
-        t.Log(err.Error())
-   }
+	imgData = strings.Replace(imgData, "\n", "", -1)
+	imgBytes, err := hex.DecodeString(imgData)
+	if err != nil {
+		t.Fatalf("Unable to parse image data.")
+	}
+	body := &bytes.Buffer{}
+	partWriter := multipart.NewWriter(body)
+	jsonHeader := textproto.MIMEHeader{}
+	jsonHeader.Add("Content-Type", "application/json")
+	jsonWriter, err := partWriter.CreatePart(jsonHeader)
+	io.WriteString(jsonWriter, jsonData)
+	imgHeader := textproto.MIMEHeader{}
+	imgHeader.Add("Content-Type", "img/jpeg")
+	imgWriter, err := partWriter.CreatePart(imgHeader)
+	imgWriter.Write(imgBytes)
+	partWriter.Close()
+	req, _ := http.NewRequest("POST", "http://localhost:8765/beacon", body)
+	req.Header.Add("Content-Type", partWriter.FormDataContentType())
+	client := &http.Client{}
+	_, err = client.Do(req)
+	if err != nil {
+		t.Log(err.Error())
+	}
+}
+
+func TestGetBeacon(t *testing.T) {
+
 }

@@ -157,20 +157,20 @@ func GetBeaconRedis(id uint64, client *redis.Client) (Beacon, error) {
 	return post, nil
 }
 
-func AddBeacon(post *Beacon, client *redis.Client) error {
-    err := AddBeaconRedis(post, client)
+func AddBeacon(post *Beacon, client *redis.Client) (uint64, error) {
+	id, err := AddBeaconRedis(post, client)
 	// post.AddPostGres()
-    return err
+	return id, err
 }
 
-func AddBeaconRedis(post *Beacon, client *redis.Client) error {
+func AddBeaconRedis(post *Beacon, client *redis.Client) (uint64, error) {
 	postID, err := client.Incr("post-count").Result()
 	if postID < 0 {
-		return errors.New("Retrieved post count was negative.")
+		return 0, errors.New("Retrieved post count was negative.")
 	}
 	post.ID = uint64(postID)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	key := GetRedisPostKey(post.ID)
 	locBytes, _ := post.Location.MarshalBinary()
@@ -185,7 +185,7 @@ func AddBeaconRedis(post *Beacon, client *redis.Client) error {
 		"time", now,
 		"type", "beacon")
 	client.Expire(key, REDIS_EXPIRE)
-	return nil
+	return post.ID, nil
 }
 
 func AddComment(comment *Comment, client *redis.Client) error {
