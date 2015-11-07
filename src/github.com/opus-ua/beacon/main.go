@@ -8,6 +8,8 @@ import (
 	"log"
 	"net/http"
 	"runtime"
+    "gopkg.in/redis.v3"
+    . "github.com/opus-ua/beacon-rest"
 )
 
 var version string = "0.0.0"
@@ -64,7 +66,17 @@ func StartServer() {
 	cores := runtime.NumCPU()
 	log.Printf("Core Count: %d", cores)
 
+    client := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       0,
+	})
+
 	http.HandleFunc("/version", HandleVersion)
+    http.HandleFunc("/beacon", func (w http.ResponseWriter, r *http.Request) {
+        log.Printf("Received beacon post request.\n")
+        HandlePostBeacon(w, r, client)
+    })
 	err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 	if err != nil {
 		if port == DEFAULT_PORT {
