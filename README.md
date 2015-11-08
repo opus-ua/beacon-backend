@@ -94,6 +94,21 @@ Content-Type: image/jpeg
 <BINARY_IMAGE_DATA>
 ```
 
+## Hearting a Beacon
+
+Send an empty POST to /heart/[post-id] to heart the corresponding
+post.
+
+```http
+POST /heart/1 HTTP/1.1 
+```
+
+In response, you will receive a 200 OK if nothing has gone wrong.
+
+```http
+HTTP/1.1 200 OK
+```
+
 ## General Errors
 If any error condition is met while a request is being served, a
 response similar to the following will be returned.

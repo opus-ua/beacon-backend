@@ -130,6 +130,16 @@ func TestGetBeacon(t *testing.T) {
 	}
 }
 
+func TestHeartPost(t *testing.T) {
+	key := GetRedisPostKey(1)
+	RedisExpect(client.HGet(key, "hearts"), "5", t)
+	err := HeartPostRedis(1, client)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	RedisExpect(client.HGet(key, "hearts"), "6", t)
+}
+
 func BenchmarkAddBeacon(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		p.Description = strconv.Itoa(i)

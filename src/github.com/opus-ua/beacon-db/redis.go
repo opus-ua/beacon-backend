@@ -223,3 +223,17 @@ func AddCommentRedis(comment *Comment, client *redis.Client) error {
 	client.Expire(commKey, REDIS_EXPIRE)
 	return nil
 }
+
+func HeartPost(postID uint64, client *redis.Client) error {
+	return HeartPostRedis(postID, client)
+}
+
+func HeartPostRedis(postID uint64, client *redis.Client) error {
+	key := GetRedisPostKey(postID)
+	_, err := client.HIncrBy(key, "hearts", 1).Result()
+	if err != nil {
+		return err
+	}
+	client.Expire(key, REDIS_EXPIRE)
+	return nil
+}

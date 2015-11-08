@@ -192,7 +192,6 @@ func HandlePostBeacon(w http.ResponseWriter, r *http.Request, client *redis.Clie
 }
 
 func HandleGetBeacon(w http.ResponseWriter, r *http.Request, id uint64, client *redis.Client) {
-    // ip := r.RemoteAddr
     beacon, err := GetBeacon(id, client)
     if err != nil {
         ErrorJSON(w, "Could not retrieve post from db.", 404)
@@ -221,4 +220,13 @@ func HandleGetBeacon(w http.ResponseWriter, r *http.Request, id uint64, client *
     partWriter.Close()
     w.Header().Add("Content-Type", partWriter.FormDataContentType())
     w.Write(respBody.Bytes())
+}
+
+func HandleHeartPost(w http.ResponseWriter, r *http.Request, id uint64, client *redis.Client) {
+    err := HeartPostRedis(id, client)
+    if err != nil {
+        log.Printf(err.Error())
+        ErrorJSON(w, "Could not heart post.", 500)
+    }
+    w.WriteHeader(200)
 }

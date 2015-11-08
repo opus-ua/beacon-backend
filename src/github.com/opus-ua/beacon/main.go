@@ -89,6 +89,8 @@ func StartServer(dev bool) {
 	mux.HandleFunc("/beacon", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
 			HandlePostBeacon(w, r, client)
+		} else {
+			ErrorJSON(w, "Only method POST supported.", 400)
 		}
 	})
 	mux.HandleFunc("/beacon/", func(w http.ResponseWriter, r *http.Request) {
@@ -107,6 +109,28 @@ func StartServer(dev bool) {
 			}
 			id := uint64(idSigned)
 			HandleGetBeacon(w, r, id, client)
+		} else {
+			ErrorJSON(w, "Only method GET supported.", 400)
+		}
+	})
+	mux.HandleFunc("/heart/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			splitURI := strings.Split(r.RequestURI, "/")
+			if len(splitURI) < 3 {
+				ErrorJSON(w, "Could not parse post id.", http.StatusBadRequest)
+				return
+			}
+			idStr := splitURI[2]
+			idSigned, err := strconv.ParseInt(idStr, 10, 64)
+			if err != nil {
+				log.Fatal(err.Error())
+				ErrorJSON(w, "Could not parse post id.", http.StatusBadRequest)
+				return
+			}
+			id := uint64(idSigned)
+			HandleHeartPost(w, r, id, client)
+		} else {
+			ErrorJSON(w, "Only method POST supported.", 400)
 		}
 	})
 	loggingHandler := NewApacheLoggingHandler(mux)
