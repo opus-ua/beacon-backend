@@ -120,3 +120,13 @@ func TestHeartPost(t *testing.T) {
 		t.Fatalf("Response status code was %d.", resp.StatusCode)
 	}
 }
+
+func TestFlagPost(t *testing.T) {
+	resp, err := http.Post("http://localhost:8765/flag/1", "application/json", &bytes.Buffer{})
+	if err != nil {
+		t.Fatalf("Could not connect to beacon backend.")
+	}
+	if resp.StatusCode != 200 {
+		t.Fatalf("Response status code was %d.", resp.StatusCode)
+	}
+}

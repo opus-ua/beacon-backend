@@ -223,10 +223,19 @@ func HandleGetBeacon(w http.ResponseWriter, r *http.Request, id uint64, client *
 }
 
 func HandleHeartPost(w http.ResponseWriter, r *http.Request, id uint64, client *redis.Client) {
-    err := HeartPostRedis(id, client)
+    err := HeartPost(id, client)
     if err != nil {
         log.Printf(err.Error())
         ErrorJSON(w, "Could not heart post.", 500)
+    }
+    w.WriteHeader(200)
+}
+
+func HandleFlagPost(w http.ResponseWriter, r *http.Request, id uint64, client *redis.Client) {
+    err := FlagPost(id, client)
+    if err != nil {
+        log.Printf(err.Error())
+        ErrorJSON(w, "Could not flag post.", 500)
     }
     w.WriteHeader(200)
 }

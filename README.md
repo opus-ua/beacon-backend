@@ -94,13 +94,30 @@ Content-Type: image/jpeg
 <BINARY_IMAGE_DATA>
 ```
 
-## Hearting a Beacon
+## Hearting a Post
 
 Send an empty POST to /heart/[post-id] to heart the corresponding
 post.
 
 ```http
 POST /heart/1 HTTP/1.1 
+```
+
+In response, you will receive a 200 OK if nothing has gone wrong.
+
+```http
+HTTP/1.1 200 OK
+```
+
+## Flagging a Post
+
+The process of flagging a post is extremely similar to hearting
+a post.
+Send an empty POST to /flag/[post-id] to flag the corresponding
+post.
+
+```http
+POST /flag/1 HTTP/1.1 
 ```
 
 In response, you will receive a 200 OK if nothing has gone wrong.

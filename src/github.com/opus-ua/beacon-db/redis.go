@@ -237,3 +237,17 @@ func HeartPostRedis(postID uint64, client *redis.Client) error {
 	client.Expire(key, REDIS_EXPIRE)
 	return nil
 }
+
+func FlagPost(postID uint64, client *redis.Client) error {
+	return FlagPostRedis(postID, client)
+}
+
+func FlagPostRedis(postID uint64, client *redis.Client) error {
+	key := GetRedisPostKey(postID)
+	_, err := client.HIncrBy(key, "flags", 1).Result()
+	if err != nil {
+		return err
+	}
+	client.Expire(key, REDIS_EXPIRE)
+	return nil
+}
