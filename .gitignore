@@ -2,3 +2,4 @@ pkg/
 bin/
 *.sw*
 todo.txt
+src/gopkg.in/
