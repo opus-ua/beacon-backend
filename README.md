@@ -74,9 +74,9 @@ Content-Type: application/json
     "comments": [
         {
             "id": 2,
-            "user": 54321
+            "user": 54321,
             "text": "This post is bad and you should feel bad.",
-            "hearts": 7
+            "hearts": 7,
             "time": "Sat Nov. 7 21:13:33 CST 2015"
         },
         {
