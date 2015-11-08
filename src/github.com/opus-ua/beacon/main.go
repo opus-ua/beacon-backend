@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	. "github.com/opus-ua/beacon-rest"
 	"gopkg.in/redis.v3"
 	"io"
 	"log"
@@ -13,6 +12,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	. "github.com/opus-ua/beacon-dummy"
+	. "github.com/opus-ua/beacon-rest"
 )
 
 var version string = "0.0.0"
@@ -40,8 +41,6 @@ func init() {
 }
 
 func HandleVersion(w http.ResponseWriter, r *http.Request) {
-	msg := fmt.Sprintf("Received version request from %s.\n", r.RemoteAddr)
-	log.Printf(msg)
 	switch r.Method {
 	case "GET":
 		versionJSON, err := json.Marshal(VersionInfo{Number: version, Hash: gitHash})
@@ -80,6 +79,7 @@ func StartServer(dev bool) {
 			log.Printf("Could not select unused dev database.\n")
 			os.Exit(1)
 		}
+        AddDummy(client)
 	}
 
 	http.HandleFunc("/version", HandleVersion)
@@ -121,6 +121,13 @@ func PrintVersion() {
 }
 
 func main() {
+    logFile, err := os.OpenFile("/var/log/beacon", os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+    if err != nil {
+        fmt.Printf("Could not open log file '/var/log/beacon'. %s", err.Error())
+        os.Exit(1)
+    }
+    logWriter := io.MultiWriter(logFile, os.Stdout)
+    log.SetOutput(logWriter)
 	if showVersion {
 		PrintVersion()
 	} else {

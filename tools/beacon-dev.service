@@ -1,0 +1,12 @@
+[Unit]
+Description=Beacon Social Network Backend
+After=syslog.target
+
+[Service]
+Type=simple
+PIDFile=/var/run/beacon.pid
+ExecStart=/usr/bin/beacon --dev
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target
