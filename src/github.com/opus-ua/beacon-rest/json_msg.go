@@ -2,6 +2,7 @@ package beaconrest
 
 import (
     "mime/multipart"
+    "net/textproto"
     "mime"
     "net/http"
     "errors"
@@ -13,6 +14,7 @@ import (
     "gopkg.in/redis.v3"
     "time"
     "io"
+    "bytes"
     . "github.com/opus-ua/beacon-post"
     . "github.com/opus-ua/beacon-db"
 )
@@ -62,7 +64,6 @@ func ParsePostBeaconJson(w http.ResponseWriter, part *multipart.Part, ip string)
         return Beacon{}, errors.New(msg)
     }
     var beaconMsg SubmitBeaconMsg
-    log.Printf("Received json: %s (length %d)", string(jsonBytes), len(jsonBytes))
     err = json.Unmarshal(jsonBytes, &beaconMsg)
     if err != nil {
         msg := fmt.Sprintf("Unable to parse JSON in message from %s: %s", ip, err.Error())
@@ -170,7 +171,42 @@ func HandlePostBeacon(w http.ResponseWriter, r *http.Request, client *redis.Clie
     if err != nil {
         msg := fmt.Sprintf("Unable to marshal response json.")
         log.Printf(msg)
-        return 
+        return
     }
     io.WriteString(w, string(respJson))
+}
+
+func HandleGetBeacon(w http.ResponseWriter, r *http.Request, id uint64, client *redis.Client) {
+    // ip := r.RemoteAddr
+    beacon, err := GetBeacon(id, client)
+    if err != nil {
+        msg := fmt.Sprintf("Could not retrieve post from db.")
+        log.Printf(msg)
+        return
+    }
+    respBeaconMsg := ToRespBeaconMsg(beacon)
+    respJson, err := json.Marshal(respBeaconMsg)
+    respBody := &bytes.Buffer{}
+    partWriter := multipart.NewWriter(respBody)
+    jsonHeader := textproto.MIMEHeader{}
+    jsonHeader.Add("Content-Type", "application/json")
+    jsonWriter, err := partWriter.CreatePart(jsonHeader)
+    if err != nil {
+        msg := fmt.Sprintf("Could not write multipart response.")
+        log.Printf(msg)
+        return
+    }
+    jsonWriter.Write(respJson)
+    imgHeader := textproto.MIMEHeader{}
+    imgHeader.Add("Content-Type", "img/jpeg")
+    imgWriter, err := partWriter.CreatePart(imgHeader)
+    if err != nil {
+        msg := fmt.Sprintf("Could not write multipart response.")
+        log.Printf(msg)
+        return
+    }
+    imgWriter.Write(beacon.Image)
+    partWriter.Close()
+    w.Header().Add("Content-Type", partWriter.FormDataContentType())
+    w.Write(respBody.Bytes())
 }

@@ -88,19 +88,25 @@ func TestPostBeacon(t *testing.T) {
 	req, _ := http.NewRequest("POST", "http://localhost:8765/beacon", body)
 	req.Header.Add("Content-Type", partWriter.FormDataContentType())
 	client := &http.Client{}
-    resp, err := client.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		t.Error(err.Error())
 	}
-    respBody, err := ioutil.ReadAll(resp.Body)
-    if err != nil {
-        t.Error(err.Error())
-    }
-    if !strings.Contains(string(respBody), "*high pitched squealing*") {
-        t.Error("Response did not contain correct content.")
-    }
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if !strings.Contains(string(respBody), "*high pitched squealing*") {
+		t.Error("Response did not contain correct content.")
+	}
 }
 
 func TestGetBeacon(t *testing.T) {
-    
+	resp, err := http.Get("http://localhost:8765/beacon/1")
+	if err != nil {
+		t.Fatalf("Could not connect to beacon backend.")
+	}
+	if resp.StatusCode != 200 {
+		t.Fatalf("Response status code was %d.", resp.StatusCode)
+	}
 }

@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strconv"
+	"strings"
 )
 
 var version string = "0.0.0"
@@ -76,7 +78,7 @@ func StartServer(dev bool) {
 	})
 
 	if dev {
-        log.Printf("Starting in dev mode.")
+		log.Printf("Starting in dev mode.")
 		if err := client.Select(11).Err(); err != nil {
 			log.Printf("Could not select unused dev database.\n")
 			os.Exit(1)
@@ -85,8 +87,31 @@ func StartServer(dev bool) {
 
 	http.HandleFunc("/version", HandleVersion)
 	http.HandleFunc("/beacon", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("Received beacon post request.\n")
-		HandlePostBeacon(w, r, client)
+		log.Printf("%s %s - %s", r.Method, r.RequestURI, r.RemoteAddr)
+		if r.Method == "POST" {
+			log.Printf("Received beacon POST request.\n")
+			HandlePostBeacon(w, r, client)
+		}
+	})
+	http.HandleFunc("/beacon/", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s %s - %s", r.Method, r.RequestURI, r.RemoteAddr)
+		if r.Method == "GET" {
+			splitURI := strings.Split(r.RequestURI, "/")
+			if len(splitURI) < 3 {
+				ErrorJSON(w, "Could not parse post id.", http.StatusBadRequest)
+				return
+			}
+			idStr := splitURI[2]
+			idSigned, err := strconv.ParseInt(idStr, 10, 64)
+			if err != nil {
+				log.Fatal(err.Error())
+				ErrorJSON(w, "Could not parse post id.", http.StatusBadRequest)
+				return
+			}
+			id := uint64(idSigned)
+			log.Printf("Received beacon GET request.\n")
+			HandleGetBeacon(w, r, id, client)
+		}
 	})
 	err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 	if err != nil {
