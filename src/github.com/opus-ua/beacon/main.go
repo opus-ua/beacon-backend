@@ -30,16 +30,6 @@ type VersionInfo struct {
 	Hash   string `json:"hash"`
 }
 
-type JSONError struct {
-	Text string `json:"error"`
-}
-
-func ErrorJSON(w http.ResponseWriter, s string, code int) {
-	r, _ := json.Marshal(JSONError{Text: s})
-	http.Error(w, string(r), code)
-	log.Printf(s)
-}
-
 func init() {
 	flag.UintVar(&port, "port", DEFAULT_PORT, "the app will listen on this port")
 	flag.UintVar(&port, "p", DEFAULT_PORT, "the app will listen on this port")
@@ -66,6 +56,13 @@ func HandleVersion(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func Log(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s %s %s", r.Method, r.RequestURI, r.RemoteAddr)
+		handler.ServeHTTP(w, r)
+	})
+}
+
 func StartServer(dev bool) {
 	log.Printf("Listening on port %d.\n", port)
 	cores := runtime.NumCPU()
@@ -87,14 +84,11 @@ func StartServer(dev bool) {
 
 	http.HandleFunc("/version", HandleVersion)
 	http.HandleFunc("/beacon", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s - %s", r.Method, r.RequestURI, r.RemoteAddr)
 		if r.Method == "POST" {
-			log.Printf("Received beacon POST request.\n")
 			HandlePostBeacon(w, r, client)
 		}
 	})
 	http.HandleFunc("/beacon/", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s - %s", r.Method, r.RequestURI, r.RemoteAddr)
 		if r.Method == "GET" {
 			splitURI := strings.Split(r.RequestURI, "/")
 			if len(splitURI) < 3 {
@@ -109,11 +103,10 @@ func StartServer(dev bool) {
 				return
 			}
 			id := uint64(idSigned)
-			log.Printf("Received beacon GET request.\n")
 			HandleGetBeacon(w, r, id, client)
 		}
 	})
-	err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+	err := http.ListenAndServe(fmt.Sprintf(":%d", port), Log(http.DefaultServeMux))
 	if err != nil {
 		if port == DEFAULT_PORT {
 			log.Printf("Is an instance of Beacon already running?\n")

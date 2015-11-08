@@ -57,6 +57,16 @@ type RespBeaconMsg struct {
     Comments    []RespCommentMsg `json:"comments"`
 }
 
+type JSONError struct {
+	Text string `json:"error"`
+}
+
+func ErrorJSON(w http.ResponseWriter, s string, code int) {
+	r, _ := json.Marshal(JSONError{Text: s})
+	http.Error(w, string(r), code)
+	log.Printf(s)
+}
+
 func ParsePostBeaconJson(w http.ResponseWriter, part *multipart.Part, ip string) (Beacon, error) {
     jsonBytes, err := ioutil.ReadAll(part)
     if err != nil {
@@ -67,7 +77,7 @@ func ParsePostBeaconJson(w http.ResponseWriter, part *multipart.Part, ip string)
     err = json.Unmarshal(jsonBytes, &beaconMsg)
     if err != nil {
         msg := fmt.Sprintf("Unable to parse JSON in message from %s: %s", ip, err.Error())
-        http.Error(w, "{\"error\": \"Malformed JSON.\"}", 400)
+        ErrorJSON(w, "Received malformed json.", 400)
         return Beacon{}, errors.New(msg)
     }
     post := Beacon{
@@ -84,11 +94,10 @@ func GetPostBeaconImg(w http.ResponseWriter, part *multipart.Part, ip string) ([
     imgBytes, err := ioutil.ReadAll(part)
     if err != nil {
         msg := fmt.Sprintf("Unable to read image from %s: %s", ip, err.Error())
-        http.Error(w, "", 500)
+        ErrorJSON(w, "Unable to read submitted image.", 500)
         return []byte{}, errors.New(msg)
     }
-    return imgBytes, nil
-}
+    return imgBytes, nil }
 
 func ToRespCommentMsg(comment Comment) RespCommentMsg {
     return RespCommentMsg{
@@ -134,34 +143,44 @@ func HandlePostBeacon(w http.ResponseWriter, r *http.Request, client *redis.Clie
     mediaType, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
     if err != nil {
         log.Printf(err.Error())
+        ErrorJSON(w, "Content-Type not present.", 400)
         return
     }
     if !strings.HasPrefix(mediaType, "multipart/") {
         log.Printf("Received non-multipart message.\n")
+        ErrorJSON(w, "Received non multi-part message.", 400)
         return
     }
     multiReader := multipart.NewReader(r.Body, params["boundary"])
     jsonPart, err := multiReader.NextPart()
     if err != nil {
         log.Printf(err.Error())
+        ErrorJSON(w, "Received too few parts in message.", 400)
         return
     }
     post, err := ParsePostBeaconJson(w, jsonPart, ip)
     if err != nil {
         log.Printf(err.Error())
+        ErrorJSON(w, "Received malformed JSON.", 400)
         return
     }
     imgPart, err := multiReader.NextPart()
+    if err != nil {
+        log.Printf(err.Error())
+        ErrorJSON(w, "No image present in message.", 400)
+        return
+    }
     img, err := GetPostBeaconImg(w, imgPart, ip)
     if err != nil {
         log.Printf(err.Error())
+        ErrorJSON(w, "Could not read image in message.", 400)
         return
     }
     post.Image = img
     id, err := AddBeacon(&post, client)
     if err != nil {
         msg := fmt.Sprintf("Database error for connection to %s: %s", ip, err.Error())
-        http.Error(w, "{\"error\": \"Database error.\"}", 500)
+        ErrorJSON(w, "Database error.", 500)
         log.Printf(msg)
         return
     }
@@ -171,6 +190,7 @@ func HandlePostBeacon(w http.ResponseWriter, r *http.Request, client *redis.Clie
     if err != nil {
         msg := fmt.Sprintf("Unable to marshal response json.")
         log.Printf(msg)
+        ErrorJSON(w, "Could not marshal response JSON.", 500)
         return
     }
     io.WriteString(w, string(respJson))
@@ -182,6 +202,7 @@ func HandleGetBeacon(w http.ResponseWriter, r *http.Request, id uint64, client *
     if err != nil {
         msg := fmt.Sprintf("Could not retrieve post from db.")
         log.Printf(msg)
+        ErrorJSON(w, "Could not retrieve post from db.", 500)
         return
     }
     respBeaconMsg := ToRespBeaconMsg(beacon)
@@ -194,6 +215,7 @@ func HandleGetBeacon(w http.ResponseWriter, r *http.Request, id uint64, client *
     if err != nil {
         msg := fmt.Sprintf("Could not write multipart response.")
         log.Printf(msg)
+        ErrorJSON(w, "Could not write response.", 500)
         return
     }
     jsonWriter.Write(respJson)
@@ -203,6 +225,7 @@ func HandleGetBeacon(w http.ResponseWriter, r *http.Request, id uint64, client *
     if err != nil {
         msg := fmt.Sprintf("Could not write multipart response.")
         log.Printf(msg)
+        ErrorJSON(w, "Could not write response.", 500)
         return
     }
     imgWriter.Write(beacon.Image)
