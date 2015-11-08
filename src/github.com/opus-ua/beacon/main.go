@@ -73,12 +73,14 @@ func StartServer(dev bool) {
 		DB:       0,
 	})
 
+
 	if dev {
 		log.Printf("Starting in dev mode.")
 		if err := client.Select(11).Err(); err != nil {
 			log.Printf("Could not select unused dev database.\n")
 			os.Exit(1)
 		}
+        client.FlushDb()
         AddDummy(client)
 	}
 

@@ -865,12 +865,12 @@ func AddDummy(client *redis.Client) {
         os.Exit(1)
     }
     commentA := Comment{
-        ID: id,
+        BeaconID: id,
         PosterID: 1789,
         Text: "You have zero sense of composition, bro.",
     }
     commentB := Comment{
-        ID: id,
+        BeaconID: id,
         PosterID: 1776,
         Text: "You have zero social skills, bro.",
     }
