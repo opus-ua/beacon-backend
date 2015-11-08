@@ -81,7 +81,7 @@ func ParsePostBeaconJson(w http.ResponseWriter, part *multipart.Part, ip string)
         return Beacon{}, errors.New(msg)
     }
     post := Beacon{
-        ID: beaconMsg.Poster,
+        PosterID: beaconMsg.Poster,
         Location: Geotag{Latitude: beaconMsg.Latitude, Longitude: beaconMsg.Longitude},
         Description: beaconMsg.Text,
         Hearts: 0,
