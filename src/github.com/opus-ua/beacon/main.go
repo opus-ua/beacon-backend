@@ -84,13 +84,14 @@ func StartServer(dev bool) {
 		AddDummy(client)
 	}
 
-	http.HandleFunc("/version", HandleVersion)
-	http.HandleFunc("/beacon", func(w http.ResponseWriter, r *http.Request) {
+	mux := http.DefaultServeMux
+	mux.HandleFunc("/version", HandleVersion)
+	mux.HandleFunc("/beacon", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
 			HandlePostBeacon(w, r, client)
 		}
 	})
-	http.HandleFunc("/beacon/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/beacon/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
 			splitURI := strings.Split(r.RequestURI, "/")
 			if len(splitURI) < 3 {
@@ -108,7 +109,13 @@ func StartServer(dev bool) {
 			HandleGetBeacon(w, r, id, client)
 		}
 	})
-	err := http.ListenAndServe(fmt.Sprintf(":%d", port), Log(http.DefaultServeMux))
+	loggingHandler := NewApacheLoggingHandler(mux)
+	server := &http.Server{
+		Addr:    fmt.Sprintf(":%d", port),
+		Handler: loggingHandler,
+	}
+	// err := http.ListenAndServe(fmt.Sprintf(":%d", port), Log(http.DefaultServeMux))
+	err := server.ListenAndServe()
 	if err != nil {
 		if port == DEFAULT_PORT {
 			log.Printf("Is an instance of Beacon already running?\n")
