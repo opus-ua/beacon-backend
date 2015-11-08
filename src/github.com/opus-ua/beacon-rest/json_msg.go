@@ -147,7 +147,6 @@ func HandlePostBeacon(w http.ResponseWriter, r *http.Request, client *redis.Clie
         return
     }
     if !strings.HasPrefix(mediaType, "multipart/") {
-        log.Printf("Received non-multipart message.\n")
         ErrorJSON(w, "Received non multi-part message.", 400)
         return
     }
@@ -179,17 +178,13 @@ func HandlePostBeacon(w http.ResponseWriter, r *http.Request, client *redis.Clie
     post.Image = img
     id, err := AddBeacon(&post, client)
     if err != nil {
-        msg := fmt.Sprintf("Database error for connection to %s: %s", ip, err.Error())
         ErrorJSON(w, "Database error.", 500)
-        log.Printf(msg)
         return
     }
     postedBeacon, err := GetBeacon(id, client)
     respBeaconMsg := ToRespBeaconMsg(postedBeacon)
     respJson, err := json.Marshal(respBeaconMsg)
     if err != nil {
-        msg := fmt.Sprintf("Unable to marshal response json.")
-        log.Printf(msg)
         ErrorJSON(w, "Could not marshal response JSON.", 500)
         return
     }
@@ -200,9 +195,7 @@ func HandleGetBeacon(w http.ResponseWriter, r *http.Request, id uint64, client *
     // ip := r.RemoteAddr
     beacon, err := GetBeacon(id, client)
     if err != nil {
-        msg := fmt.Sprintf("Could not retrieve post from db.")
-        log.Printf(msg)
-        ErrorJSON(w, "Could not retrieve post from db.", 500)
+        ErrorJSON(w, "Could not retrieve post from db.", 404)
         return
     }
     respBeaconMsg := ToRespBeaconMsg(beacon)
@@ -213,8 +206,6 @@ func HandleGetBeacon(w http.ResponseWriter, r *http.Request, id uint64, client *
     jsonHeader.Add("Content-Type", "application/json")
     jsonWriter, err := partWriter.CreatePart(jsonHeader)
     if err != nil {
-        msg := fmt.Sprintf("Could not write multipart response.")
-        log.Printf(msg)
         ErrorJSON(w, "Could not write response.", 500)
         return
     }
@@ -223,8 +214,6 @@ func HandleGetBeacon(w http.ResponseWriter, r *http.Request, id uint64, client *
     imgHeader.Add("Content-Type", "img/jpeg")
     imgWriter, err := partWriter.CreatePart(imgHeader)
     if err != nil {
-        msg := fmt.Sprintf("Could not write multipart response.")
-        log.Printf(msg)
         ErrorJSON(w, "Could not write response.", 500)
         return
     }

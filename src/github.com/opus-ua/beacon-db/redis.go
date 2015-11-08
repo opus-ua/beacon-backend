@@ -24,15 +24,12 @@ func GetRedisCommentListKey(id uint64) string {
 }
 
 func GetBeacon(id uint64, client *redis.Client) (Beacon, error) {
-	if post, err := GetBeaconRedis(id, client); err == nil {
-		return post, nil
-	}
+	return GetBeaconRedis(id, client)
 	/*
 	   if post, err = GetPostGres(id, gresClient); err == nil {
 	       return post, nil
 	   }
 	*/
-	return Beacon{}, nil
 }
 
 func RedisParseUInt64(res string, err error) (uint64, error) {
@@ -77,6 +74,12 @@ func RedisParseBinary(res string, obj encoding.BinaryUnmarshaler, err error) err
 func GetBeaconOnlyRedis(id uint64, client *redis.Client) (Beacon, error) {
 	key := GetRedisPostKey(id)
 	res, err := client.HGetAllMap(key).Result()
+	if err != nil {
+		return Beacon{}, err
+	}
+	if len(res) == 0 {
+		return Beacon{}, errors.New("Beacon not found in db.")
+	}
 	var geotag Geotag
 	err = RedisParseBinary(res["loc"], &geotag, err)
 	timePosted, err := RedisParseTime(res["time"], err)
