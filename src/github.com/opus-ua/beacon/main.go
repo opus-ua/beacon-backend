@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	. "github.com/opus-ua/beacon-dummy"
+	. "github.com/opus-ua/beacon-rest"
 	"gopkg.in/redis.v3"
 	"io"
 	"log"
@@ -12,8 +14,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	. "github.com/opus-ua/beacon-dummy"
-	. "github.com/opus-ua/beacon-rest"
 )
 
 var version string = "0.0.0"
@@ -27,8 +27,9 @@ var (
 )
 
 type VersionInfo struct {
-	Number string `json:"version"`
-	Hash   string `json:"hash"`
+	Number  string `json:"version"`
+	Hash    string `json:"hash"`
+	DevMode bool   `json:"dev-mode"`
 }
 
 func init() {
@@ -43,7 +44,7 @@ func init() {
 func HandleVersion(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		versionJSON, err := json.Marshal(VersionInfo{Number: version, Hash: gitHash})
+		versionJSON, err := json.Marshal(VersionInfo{Number: version, Hash: gitHash, DevMode: devMode})
 		if err != nil {
 			ErrorJSON(w, "Could not retrieve version number.", http.StatusInternalServerError)
 			return
@@ -73,15 +74,14 @@ func StartServer(dev bool) {
 		DB:       0,
 	})
 
-
 	if dev {
 		log.Printf("Starting in dev mode.")
 		if err := client.Select(11).Err(); err != nil {
 			log.Printf("Could not select unused dev database.\n")
 			os.Exit(1)
 		}
-        client.FlushDb()
-        AddDummy(client)
+		client.FlushDb()
+		AddDummy(client)
 	}
 
 	http.HandleFunc("/version", HandleVersion)
@@ -123,13 +123,13 @@ func PrintVersion() {
 }
 
 func main() {
-    logFile, err := os.OpenFile("/var/log/beacon", os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
-    if err != nil {
-        fmt.Printf("Could not open log file '/var/log/beacon'. %s", err.Error())
-        os.Exit(1)
-    }
-    logWriter := io.MultiWriter(logFile, os.Stdout)
-    log.SetOutput(logWriter)
+	logFile, err := os.OpenFile("/var/log/beacon", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		fmt.Printf("Could not open log file '/var/log/beacon'. %s", err.Error())
+		os.Exit(1)
+	}
+	logWriter := io.MultiWriter(logFile, os.Stdout)
+	log.SetOutput(logWriter)
 	if showVersion {
 		PrintVersion()
 	} else {
