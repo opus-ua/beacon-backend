@@ -35,8 +35,8 @@ type RespPostMsg struct {
 }
 
 type LocationMsg struct {
-    Latitude     float64 `json:"long"`
-    Longitude    float64 `json:"lat"`
+    Latitude     float64 `json:"longitude"`
+    Longitude    float64 `json:"latitude"`
 }
 
 type SubmitBeaconMsg struct {

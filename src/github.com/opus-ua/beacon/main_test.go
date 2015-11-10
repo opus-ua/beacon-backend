@@ -63,8 +63,8 @@ var jsonData = `
     {
         "user": 24601,
         "text": "*high pitched squealing*",
-        "long": 45.0,
-        "lat": 45.0
+        "longitude": 45.0,
+        "latitude": 45.0
     }
 `
 
