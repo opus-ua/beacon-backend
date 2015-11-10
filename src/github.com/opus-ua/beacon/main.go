@@ -4,9 +4,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	. "github.com/opus-ua/beacon-dummy"
+	. "github.com/opus-ua/beacon-db"
 	. "github.com/opus-ua/beacon-rest"
-	"gopkg.in/redis.v3"
 	"io"
 	"log"
 	"net/http"
@@ -68,27 +67,13 @@ func StartServer(dev bool) {
 	cores := runtime.NumCPU()
 	log.Printf("Core Count: %d", cores)
 
-	client := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
-		DB:       0,
-	})
-
-	if dev {
-		log.Printf("Starting in dev mode.")
-		if err := client.Select(11).Err(); err != nil {
-			log.Printf("Could not select unused dev database.\n")
-			os.Exit(1)
-		}
-		client.FlushDb()
-		AddDummy(client)
-	}
+	db := NewDB(dev)
 
 	mux := http.DefaultServeMux
 	mux.HandleFunc("/version", HandleVersion)
 	mux.HandleFunc("/beacon", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
-			HandlePostBeacon(w, r, client)
+			HandlePostBeacon(w, r, db)
 		} else {
 			ErrorJSON(w, "Only method POST supported.", 400)
 		}
@@ -108,7 +93,7 @@ func StartServer(dev bool) {
 				return
 			}
 			id := uint64(idSigned)
-			HandleGetBeacon(w, r, id, client)
+			HandleGetBeacon(w, r, id, db)
 		} else {
 			ErrorJSON(w, "Only method GET supported.", 400)
 		}
@@ -128,7 +113,7 @@ func StartServer(dev bool) {
 				return
 			}
 			id := uint64(idSigned)
-			HandleHeartPost(w, r, id, client)
+			HandleHeartPost(w, r, id, db)
 		} else {
 			ErrorJSON(w, "Only method POST supported.", 400)
 		}
@@ -148,7 +133,7 @@ func StartServer(dev bool) {
 				return
 			}
 			id := uint64(idSigned)
-			HandleFlagPost(w, r, id, client)
+			HandleFlagPost(w, r, id, db)
 		} else {
 			ErrorJSON(w, "Only method POST supported.", 400)
 		}

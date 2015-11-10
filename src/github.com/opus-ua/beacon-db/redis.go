@@ -15,6 +15,52 @@ const (
 	REDIS_INT_BASE = 36
 )
 
+type DBClient struct {
+	redis *redis.Client
+	// postgres *postgres.Client
+	err error
+}
+
+func NewDB(dev bool) *DBClient {
+	if dev {
+		return DevDB()
+	} else {
+		return DefaultDB()
+	}
+}
+
+func DefaultDB() *DBClient {
+	return &DBClient{
+		redis: DefaultRedisDB(),
+	}
+}
+
+func DefaultRedisDB() *redis.Client {
+	return redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       0,
+	})
+}
+
+func DevDB() *DBClient {
+	db := &DBClient{
+		redis: DevRedisDB(),
+	}
+	AddDummy(db)
+	return db
+}
+
+func DevRedisDB() *redis.Client {
+	client := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       11,
+	})
+	client.FlushDb()
+	return client
+}
+
 func GetRedisPostKey(id uint64) string {
 	return fmt.Sprintf("p:%d", id)
 }
@@ -23,8 +69,8 @@ func GetRedisCommentListKey(id uint64) string {
 	return fmt.Sprintf("%s:c", GetRedisPostKey(id))
 }
 
-func GetBeacon(id uint64, client *redis.Client) (Beacon, error) {
-	return GetBeaconRedis(id, client)
+func (db *DBClient) GetThread(id uint64) (Beacon, error) {
+	return db.GetThreadRedis(id)
 	/*
 	   if post, err = GetPostGres(id, gresClient); err == nil {
 	       return post, nil
@@ -71,9 +117,9 @@ func RedisParseBinary(res string, obj encoding.BinaryUnmarshaler, err error) err
 	return err
 }
 
-func GetBeaconOnlyRedis(id uint64, client *redis.Client) (Beacon, error) {
+func (db *DBClient) GetBeaconRedis(id uint64) (Beacon, error) {
 	key := GetRedisPostKey(id)
-	res, err := client.HGetAllMap(key).Result()
+	res, err := db.redis.HGetAllMap(key).Result()
 	if err != nil {
 		return Beacon{}, err
 	}
@@ -102,9 +148,9 @@ func GetBeaconOnlyRedis(id uint64, client *redis.Client) (Beacon, error) {
 	return post, nil
 }
 
-func GetCommentRedis(id uint64, parent uint64, client *redis.Client) (Comment, error) {
+func (db *DBClient) GetCommentRedis(id uint64, parent uint64) (Comment, error) {
 	commentKey := GetRedisPostKey(id)
-	commHash, err := client.HGetAllMap(commentKey).Result()
+	commHash, err := db.redis.HGetAllMap(commentKey).Result()
 	commentTime, err := RedisParseTime(commHash["time"], err)
 	poster, err := RedisParseUInt64(commHash["poster"], err)
 	hearts, err := RedisParseUInt32(commHash["hearts"], err)
@@ -124,9 +170,9 @@ func GetCommentRedis(id uint64, parent uint64, client *redis.Client) (Comment, e
 	return comment, nil
 }
 
-func GetRedisCommentList(id uint64, client *redis.Client) ([]uint64, error) {
+func (db *DBClient) GetCommentListRedis(id uint64) ([]uint64, error) {
 	key := GetRedisCommentListKey(id)
-	strList, err := client.LRange(key, 0, -1).Result()
+	strList, err := db.redis.LRange(key, 0, -1).Result()
 	if err != nil {
 		return []uint64{}, err
 	}
@@ -141,17 +187,17 @@ func GetRedisCommentList(id uint64, client *redis.Client) ([]uint64, error) {
 	return intList, nil
 }
 
-func GetBeaconRedis(id uint64, client *redis.Client) (Beacon, error) {
-	post, err := GetBeaconOnlyRedis(id, client)
+func (db *DBClient) GetThreadRedis(id uint64) (Beacon, error) {
+	post, err := db.GetBeaconRedis(id)
 	if err != nil {
 		return Beacon{}, err
 	}
-	comments, err := GetRedisCommentList(id, client)
+	comments, err := db.GetCommentListRedis(id)
 	if err != nil {
 		return Beacon{}, err
 	}
 	for _, commentID := range comments {
-		comment, err := GetCommentRedis(commentID, id, client)
+		comment, err := db.GetCommentRedis(commentID, id)
 		if err != nil {
 			return Beacon{}, err
 		}
@@ -160,14 +206,14 @@ func GetBeaconRedis(id uint64, client *redis.Client) (Beacon, error) {
 	return post, nil
 }
 
-func AddBeacon(post *Beacon, client *redis.Client) (uint64, error) {
-	id, err := AddBeaconRedis(post, client)
+func (db *DBClient) AddBeacon(post *Beacon) (uint64, error) {
+	id, err := db.AddBeaconRedis(post)
 	// post.AddPostGres()
 	return id, err
 }
 
-func AddBeaconRedis(post *Beacon, client *redis.Client) (uint64, error) {
-	postID, err := client.Incr("post-count").Result()
+func (db *DBClient) AddBeaconRedis(post *Beacon) (uint64, error) {
+	postID, err := db.redis.Incr("post-count").Result()
 	if postID < 0 {
 		return 0, errors.New("Retrieved post count was negative.")
 	}
@@ -179,7 +225,7 @@ func AddBeaconRedis(post *Beacon, client *redis.Client) (uint64, error) {
 	locBytes, _ := post.Location.MarshalBinary()
 	locString := string(locBytes[:])
 	now := time.Now().Format(time.UnixDate)
-	client.HMSet(key, "img", string(post.Image[:]),
+	db.redis.HMSet(key, "img", string(post.Image[:]),
 		"loc", locString,
 		"poster", strconv.FormatUint(post.PosterID, REDIS_INT_BASE),
 		"desc", post.Description,
@@ -187,18 +233,18 @@ func AddBeaconRedis(post *Beacon, client *redis.Client) (uint64, error) {
 		"flags", strconv.FormatUint(uint64(post.Flags), REDIS_INT_BASE),
 		"time", now,
 		"type", "beacon")
-	client.Expire(key, REDIS_EXPIRE)
+	db.redis.Expire(key, REDIS_EXPIRE)
 	return post.ID, nil
 }
 
-func AddComment(comment *Comment, client *redis.Client) error {
-	AddCommentRedis(comment, client)
+func (db *DBClient) AddComment(comment *Comment) error {
+	db.AddCommentRedis(comment)
 	// comment.AddPostGres()
 	return nil
 }
 
-func AddCommentRedis(comment *Comment, client *redis.Client) error {
-	commentID, err := client.Incr("post-count").Result()
+func (db *DBClient) AddCommentRedis(comment *Comment) error {
+	commentID, err := db.redis.Incr("post-count").Result()
 	if commentID < 0 {
 		return errors.New("Retrieved post count was negative.")
 	}
@@ -208,46 +254,46 @@ func AddCommentRedis(comment *Comment, client *redis.Client) error {
 	}
 	beaconKey := GetRedisPostKey(comment.BeaconID)
 	IDKey := GetRedisCommentListKey(comment.BeaconID)
-	client.RPush(IDKey, strconv.FormatUint(comment.ID, REDIS_INT_BASE))
+	db.redis.RPush(IDKey, strconv.FormatUint(comment.ID, REDIS_INT_BASE))
 	commKey := GetRedisPostKey(comment.ID)
 	now := time.Now().Format(time.UnixDate)
-	client.HMSet(commKey, "poster", strconv.FormatUint(comment.PosterID, REDIS_INT_BASE),
+	db.redis.HMSet(commKey, "poster", strconv.FormatUint(comment.PosterID, REDIS_INT_BASE),
 		"parent", strconv.FormatUint(comment.BeaconID, REDIS_INT_BASE),
 		"text", comment.Text,
 		"hearts", strconv.FormatUint(uint64(comment.Hearts), REDIS_INT_BASE),
 		"flags", strconv.FormatUint(uint64(comment.Flags), REDIS_INT_BASE),
 		"time", now,
 		"type", "comment")
-	client.Expire(beaconKey, REDIS_EXPIRE)
-	client.Expire(IDKey, REDIS_EXPIRE)
-	client.Expire(commKey, REDIS_EXPIRE)
+	db.redis.Expire(beaconKey, REDIS_EXPIRE)
+	db.redis.Expire(IDKey, REDIS_EXPIRE)
+	db.redis.Expire(commKey, REDIS_EXPIRE)
 	return nil
 }
 
-func HeartPost(postID uint64, client *redis.Client) error {
-	return HeartPostRedis(postID, client)
+func (db *DBClient) HeartPost(postID uint64) error {
+	return db.HeartPostRedis(postID)
 }
 
-func HeartPostRedis(postID uint64, client *redis.Client) error {
+func (db *DBClient) HeartPostRedis(postID uint64) error {
 	key := GetRedisPostKey(postID)
-	_, err := client.HIncrBy(key, "hearts", 1).Result()
+	_, err := db.redis.HIncrBy(key, "hearts", 1).Result()
 	if err != nil {
 		return err
 	}
-	client.Expire(key, REDIS_EXPIRE)
+	db.redis.Expire(key, REDIS_EXPIRE)
 	return nil
 }
 
-func FlagPost(postID uint64, client *redis.Client) error {
-	return FlagPostRedis(postID, client)
+func (db *DBClient) FlagPost(postID uint64) error {
+	return db.FlagPostRedis(postID)
 }
 
-func FlagPostRedis(postID uint64, client *redis.Client) error {
+func (db *DBClient) FlagPostRedis(postID uint64) error {
 	key := GetRedisPostKey(postID)
-	_, err := client.HIncrBy(key, "flags", 1).Result()
+	_, err := db.redis.HIncrBy(key, "flags", 1).Result()
 	if err != nil {
 		return err
 	}
-	client.Expire(key, REDIS_EXPIRE)
+	db.redis.Expire(key, REDIS_EXPIRE)
 	return nil
 }

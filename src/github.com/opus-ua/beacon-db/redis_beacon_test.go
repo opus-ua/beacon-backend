@@ -10,6 +10,7 @@ import (
 	"testing"
 )
 
+var db *DBClient
 var client *redis.Client = nil
 
 func TestMain(m *testing.M) {
@@ -21,6 +22,9 @@ func TestMain(m *testing.M) {
 	if err := client.Select(11).Err(); err != nil {
 		fmt.Printf("Could not select unused database.\n")
 		os.Exit(1)
+	}
+	db = &DBClient{
+		redis: client,
 	}
 	client.FlushDb()
 	res := m.Run()
@@ -53,7 +57,7 @@ var p Beacon = Beacon{
 }
 
 func TestAddBeacon(t *testing.T) {
-	_, err := AddBeacon(&p, client)
+	_, err := db.AddBeacon(&p)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -85,8 +89,8 @@ var commentB Comment = Comment{
 }
 
 func TestAddComment(t *testing.T) {
-	AddComment(&commentA, client)
-	AddComment(&commentB, client)
+	db.AddComment(&commentA)
+	db.AddComment(&commentB)
 	commentListKey := "p:1:c"
 	res, err := client.LRange(commentListKey, 0, -1).Result()
 	if err != nil {
@@ -115,7 +119,7 @@ func TestAddComment(t *testing.T) {
 }
 
 func TestGetBeacon(t *testing.T) {
-	post, err := GetBeaconRedis(1, client)
+	post, err := db.GetThreadRedis(1)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -133,7 +137,7 @@ func TestGetBeacon(t *testing.T) {
 func TestHeartPost(t *testing.T) {
 	key := GetRedisPostKey(1)
 	RedisExpect(client.HGet(key, "hearts"), "5", t)
-	err := HeartPostRedis(1, client)
+	err := db.HeartPostRedis(1)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -143,22 +147,22 @@ func TestHeartPost(t *testing.T) {
 func TestFlagPost(t *testing.T) {
 	key := GetRedisPostKey(1)
 	RedisExpect(client.HGet(key, "flags"), "1", t)
-	err := FlagPostRedis(1, client)
+	err := db.FlagPostRedis(1)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
 	RedisExpect(client.HGet(key, "flags"), "2", t)
 }
 
-func BenchmarkAddBeacon(b *testing.B) {
+func BenchmarkAddBeaconRedis(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		p.Description = strconv.Itoa(i)
-		AddBeacon(&p, client)
+		db.AddBeacon(&p)
 	}
 }
 
-func BenchmarkRetrieveBeacon(b *testing.B) {
+func BenchmarkRetrieveBeaconRedis(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		GetBeaconRedis(1, client)
+		db.GetThreadRedis(1)
 	}
 }

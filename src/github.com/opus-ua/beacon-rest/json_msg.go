@@ -11,7 +11,6 @@ import (
     "fmt"
     "strings"
     "io/ioutil"
-    "gopkg.in/redis.v3"
     "time"
     "io"
     "bytes"
@@ -138,7 +137,7 @@ func ToRespBeaconMsg(beacon Beacon) RespBeaconMsg {
     }
 }
 
-func HandlePostBeacon(w http.ResponseWriter, r *http.Request, client *redis.Client) {
+func HandlePostBeacon(w http.ResponseWriter, r *http.Request, db *DBClient) {
     ip := r.RemoteAddr
     mediaType, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
     if err != nil {
@@ -176,12 +175,12 @@ func HandlePostBeacon(w http.ResponseWriter, r *http.Request, client *redis.Clie
         return
     }
     post.Image = img
-    id, err := AddBeacon(&post, client)
+    id, err := db.AddBeacon(&post)
     if err != nil {
         ErrorJSON(w, "Database error.", 500)
         return
     }
-    postedBeacon, err := GetBeacon(id, client)
+    postedBeacon, err := db.GetThread(id)
     respBeaconMsg := ToRespBeaconMsg(postedBeacon)
     respJson, err := json.Marshal(respBeaconMsg)
     if err != nil {
@@ -191,8 +190,8 @@ func HandlePostBeacon(w http.ResponseWriter, r *http.Request, client *redis.Clie
     io.WriteString(w, string(respJson))
 }
 
-func HandleGetBeacon(w http.ResponseWriter, r *http.Request, id uint64, client *redis.Client) {
-    beacon, err := GetBeacon(id, client)
+func HandleGetBeacon(w http.ResponseWriter, r *http.Request, id uint64, db *DBClient) {
+    beacon, err := db.GetThread(id)
     if err != nil {
         ErrorJSON(w, "Could not retrieve post from db.", 404)
         return
@@ -222,8 +221,8 @@ func HandleGetBeacon(w http.ResponseWriter, r *http.Request, id uint64, client *
     w.Write(respBody.Bytes())
 }
 
-func HandleHeartPost(w http.ResponseWriter, r *http.Request, id uint64, client *redis.Client) {
-    err := HeartPost(id, client)
+func HandleHeartPost(w http.ResponseWriter, r *http.Request, id uint64, db *DBClient) {
+    err := db.HeartPost(id)
     if err != nil {
         log.Printf(err.Error())
         ErrorJSON(w, "Could not heart post.", 500)
@@ -231,8 +230,8 @@ func HandleHeartPost(w http.ResponseWriter, r *http.Request, id uint64, client *
     w.WriteHeader(200)
 }
 
-func HandleFlagPost(w http.ResponseWriter, r *http.Request, id uint64, client *redis.Client) {
-    err := FlagPost(id, client)
+func HandleFlagPost(w http.ResponseWriter, r *http.Request, id uint64, db *DBClient) {
+    err := db.FlagPost(id)
     if err != nil {
         log.Printf(err.Error())
         ErrorJSON(w, "Could not flag post.", 500)

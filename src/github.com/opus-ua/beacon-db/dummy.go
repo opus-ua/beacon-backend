@@ -1,13 +1,11 @@
-package dummy
+package beacondb
 
 import (
-    "encoding/hex"
-    "strings"
-    "log"
-    "os"
-	"gopkg.in/redis.v3"
-    . "github.com/opus-ua/beacon-post"
-    . "github.com/opus-ua/beacon-db"
+	"encoding/hex"
+	. "github.com/opus-ua/beacon-post"
+	"log"
+	"os"
+	"strings"
 )
 
 var dennyImgData = `
@@ -842,46 +840,46 @@ fb354fb7931c637573943a7058f2d6f2004e38c1069c9a2c7302543afd6b
 bc1ba23d88ad53d64ff785588bfd58a9f6f3ee0923ffd9
 `
 
-func AddDummy(client *redis.Client) {
-    imgData := strings.Replace(dennyImgData, "\n", "", -1)
-    imgBytes, err := hex.DecodeString(imgData)
-    if err != nil {
-        log.Printf("Could not decode dummy image.")
-        os.Exit(1)
-    }
-    beacon := Beacon{
-        Image: imgBytes,
-        Location: Geotag{
-            Latitude: 33.219,
-            Longitude: -87.544,
-        },
-        PosterID: 1337,
-        Description: "Denny chimes sure is cool, isn't it?",
-        Comments: []Comment{},
-    }
-    id, err := AddBeacon(&beacon, client)
-    if err != nil {
-        log.Printf("Could not add dummy to database.")
-        os.Exit(1)
-    }
-    commentA := Comment{
-        BeaconID: id,
-        PosterID: 1789,
-        Text: "You have zero sense of composition, bro.",
-    }
-    commentB := Comment{
-        BeaconID: id,
-        PosterID: 1776,
-        Text: "You have zero social skills, bro.",
-    }
-    err = AddCommentRedis(&commentA, client)
-    if err != nil {
-        log.Printf("Could not add dummy to database.")
-        os.Exit(1)
-    }
-    err = AddCommentRedis(&commentB, client)
-    if err != nil {
-        log.Printf("Could not add dummy to database.")
-        os.Exit(1)
-    }
+func AddDummy(db *DBClient) {
+	imgData := strings.Replace(dennyImgData, "\n", "", -1)
+	imgBytes, err := hex.DecodeString(imgData)
+	if err != nil {
+		log.Printf("Could not decode dummy image.")
+		os.Exit(1)
+	}
+	beacon := Beacon{
+		Image: imgBytes,
+		Location: Geotag{
+			Latitude:  33.219,
+			Longitude: -87.544,
+		},
+		PosterID:    1337,
+		Description: "Denny chimes sure is cool, isn't it?",
+		Comments:    []Comment{},
+	}
+	id, err := db.AddBeacon(&beacon)
+	if err != nil {
+		log.Printf("Could not add dummy to database.")
+		os.Exit(1)
+	}
+	commentA := Comment{
+		BeaconID: id,
+		PosterID: 1789,
+		Text:     "You have zero sense of composition, bro.",
+	}
+	commentB := Comment{
+		BeaconID: id,
+		PosterID: 1776,
+		Text:     "You have zero social skills, bro.",
+	}
+	err = db.AddCommentRedis(&commentA)
+	if err != nil {
+		log.Printf("Could not add dummy to database.")
+		os.Exit(1)
+	}
+	err = db.AddCommentRedis(&commentB)
+	if err != nil {
+		log.Printf("Could not add dummy to database.")
+		os.Exit(1)
+	}
 }
