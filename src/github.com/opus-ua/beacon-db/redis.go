@@ -15,40 +15,12 @@ const (
 	REDIS_INT_BASE = 36
 )
 
-type DBClient struct {
-	redis *redis.Client
-	// postgres *postgres.Client
-	err error
-}
-
-func NewDB(dev bool) *DBClient {
-	if dev {
-		return DevDB()
-	} else {
-		return DefaultDB()
-	}
-}
-
-func DefaultDB() *DBClient {
-	return &DBClient{
-		redis: DefaultRedisDB(),
-	}
-}
-
 func DefaultRedisDB() *redis.Client {
 	return redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
 		Password: "",
 		DB:       0,
 	})
-}
-
-func DevDB() *DBClient {
-	db := &DBClient{
-		redis: DevRedisDB(),
-	}
-	AddDummy(db)
-	return db
 }
 
 func DevRedisDB() *redis.Client {
@@ -67,15 +39,6 @@ func GetRedisPostKey(id uint64) string {
 
 func GetRedisCommentListKey(id uint64) string {
 	return fmt.Sprintf("%s:c", GetRedisPostKey(id))
-}
-
-func (db *DBClient) GetThread(id uint64) (Beacon, error) {
-	return db.GetThreadRedis(id)
-	/*
-	   if post, err = GetPostGres(id, gresClient); err == nil {
-	       return post, nil
-	   }
-	*/
 }
 
 func RedisParseUInt64(res string, err error) (uint64, error) {
@@ -206,12 +169,6 @@ func (db *DBClient) GetThreadRedis(id uint64) (Beacon, error) {
 	return post, nil
 }
 
-func (db *DBClient) AddBeacon(post *Beacon) (uint64, error) {
-	id, err := db.AddBeaconRedis(post)
-	// post.AddPostGres()
-	return id, err
-}
-
 func (db *DBClient) AddBeaconRedis(post *Beacon) (uint64, error) {
 	postID, err := db.redis.Incr("post-count").Result()
 	if postID < 0 {
@@ -235,12 +192,6 @@ func (db *DBClient) AddBeaconRedis(post *Beacon) (uint64, error) {
 		"type", "beacon")
 	db.redis.Expire(key, REDIS_EXPIRE)
 	return post.ID, nil
-}
-
-func (db *DBClient) AddComment(comment *Comment) error {
-	db.AddCommentRedis(comment)
-	// comment.AddPostGres()
-	return nil
 }
 
 func (db *DBClient) AddCommentRedis(comment *Comment) error {
@@ -270,10 +221,6 @@ func (db *DBClient) AddCommentRedis(comment *Comment) error {
 	return nil
 }
 
-func (db *DBClient) HeartPost(postID uint64) error {
-	return db.HeartPostRedis(postID)
-}
-
 func (db *DBClient) HeartPostRedis(postID uint64) error {
 	key := GetRedisPostKey(postID)
 	_, err := db.redis.HIncrBy(key, "hearts", 1).Result()
@@ -282,10 +229,6 @@ func (db *DBClient) HeartPostRedis(postID uint64) error {
 	}
 	db.redis.Expire(key, REDIS_EXPIRE)
 	return nil
-}
-
-func (db *DBClient) FlagPost(postID uint64) error {
-	return db.FlagPostRedis(postID)
 }
 
 func (db *DBClient) FlagPostRedis(postID uint64) error {
