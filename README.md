@@ -15,8 +15,8 @@ Content-Type: application/json
 {
     "user": 24601,
     "text": "Who am I?",
-    "lat": 45.0,
-    "long": 45.0
+    "latitude": 45.0,
+    "longitude": 45.0
 }
 
 --793d63336
@@ -33,8 +33,8 @@ Content-Type: application/json
     "id": 525600,
     "user": 24601,
     "text": "Who am I?",
-    "lat": 45.0,
-    "long": 45.0,
+    "latitude": 45.0,
+    "longitude": 45.0,
     "time": "Sat Nov. 7 21:13:33 CST 2015"
 }
 ```
@@ -68,8 +68,8 @@ Content-Type: application/json
     "id": 1,
     "user": 24601,
     "text": "Who am I?",
-    "lat": 45.0,
-    "long": 45.0,
+    "latitude": 45.0,
+    "longitude": 45.0,
     "time": "Sat Nov. 7 21:13:22 CST 2015",
     "comments": [
         {
