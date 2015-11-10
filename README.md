@@ -68,6 +68,7 @@ Content-Type: application/json
     "id": 1,
     "user": 24601,
     "text": "Who am I?",
+    "hearts": 1,
     "latitude": 45.0,
     "longitude": 45.0,
     "time": "Sat Nov. 7 21:13:22 CST 2015",
