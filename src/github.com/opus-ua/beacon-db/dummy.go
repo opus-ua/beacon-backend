@@ -872,12 +872,52 @@ func AddDummy(db *DBClient) {
 		PosterID: 1776,
 		Text:     "You have zero social skills, bro.",
 	}
+	commentC := Comment{
+		BeaconID: id,
+		PosterID: 626,
+		Text:     "That was hurtful, man.",
+	}
+	commentD := Comment{
+		BeaconID: id,
+		PosterID: 8771,
+		Text:     "Yeah, why gang up on someone without social skills?",
+	}
+	commentE := Comment{
+		BeaconID: id,
+		PosterID: 117,
+		Text:     "first",
+	}
+	commentF := Comment{
+		BeaconID: id,
+		PosterID: 2112,
+		Text:     "Denny chimes sure is beautiful this time of year. Love -Grandma Jane",
+	}
 	err = db.AddCommentRedis(&commentA)
 	if err != nil {
 		log.Printf("Could not add dummy to database.")
 		os.Exit(1)
 	}
 	err = db.AddCommentRedis(&commentB)
+	if err != nil {
+		log.Printf("Could not add dummy to database.")
+		os.Exit(1)
+	}
+	err = db.AddCommentRedis(&commentC)
+	if err != nil {
+		log.Printf("Could not add dummy to database.")
+		os.Exit(1)
+	}
+	err = db.AddCommentRedis(&commentD)
+	if err != nil {
+		log.Printf("Could not add dummy to database.")
+		os.Exit(1)
+	}
+	err = db.AddCommentRedis(&commentE)
+	if err != nil {
+		log.Printf("Could not add dummy to database.")
+		os.Exit(1)
+	}
+	err = db.AddCommentRedis(&commentF)
 	if err != nil {
 		log.Printf("Could not add dummy to database.")
 		os.Exit(1)
