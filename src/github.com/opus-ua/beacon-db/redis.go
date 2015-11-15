@@ -286,3 +286,20 @@ func (db *DBClient) SetUserRedis(userID uint64, username string, authkey []byte)
 	}
 	return nil
 }
+
+func (db *DBClient) UserExistsRedis(userid uint64) bool {
+	res, err := db.redis.Exists(GetRedisUserKey(userid)).Result()
+	if err != nil {
+		return false
+	}
+	return res
+}
+
+func (db *DBClient) UserAuthenticatedRedis(userid uint64, authkey []byte) bool {
+	// implement actual check later
+	return true
+}
+
+func (db *DBClient) GetUsernameRedis(userid uint64) (string, error) {
+	return db.redis.HGet(GetRedisUserKey(userid), "username").Result()
+}

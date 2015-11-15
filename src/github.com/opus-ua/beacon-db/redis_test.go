@@ -164,6 +164,13 @@ func TestSetUser(t *testing.T) {
 	RedisExpect(client.HGet(key, "flags-sub"), "0", t)
 	RedisExpect(client.HGet(key, "hearts-rec"), "0", t)
 	RedisExpect(client.HGet(key, "hearts-sub"), "0", t)
+	username, err := db.GetUsernameRedis(1)
+	if err != nil {
+		t.Fatalf("Could not get username: %s", err.Error())
+	}
+	if username != "test-user" {
+		t.Fatalf("Retrieved username was '%s', not 'test-user'.", username)
+	}
 }
 
 func BenchmarkAddBeaconRedis(b *testing.B) {

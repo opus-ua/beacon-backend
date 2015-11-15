@@ -68,3 +68,21 @@ func (db *DBClient) FlagPost(postID uint64) error {
 func (db *DBClient) CreateUser(username string, authkey []byte) (uint64, error) {
 	return db.CreateUserRedis(username, authkey)
 }
+
+func (db *DBClient) UserExists(userid uint64) bool {
+	return db.UserExistsRedis(userid)
+}
+
+func (db *DBClient) UserAuthenticated(userid uint64, authkey []byte) bool {
+	if !db.UserExists(userid) {
+		return false
+	}
+	if db.devMode {
+		return true
+	}
+	return db.UserAuthenticatedRedis(userid, authkey)
+}
+
+func (db *DBClient) GetUsername(userid uint64) (string, error) {
+	return db.GetUsernameRedis(userid)
+}
