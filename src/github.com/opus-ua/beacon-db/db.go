@@ -1,33 +1,36 @@
 package beacondb
 
 import (
-	"gopkg.in/redis.v3"
 	. "github.com/opus-ua/beacon-post"
+	"gopkg.in/redis.v3"
 )
 
 type DBClient struct {
-    redis *redis.Client
-    // postgres *postgres.Client
-    err error
+	redis *redis.Client
+	// postgres *postgres.Client
+	devMode bool
+	err     error
 }
 
 func NewDB(dev bool) *DBClient {
-    if dev {
-        return DevDB()
-    } else {
-        return DefaultDB()
-    }
+	if dev {
+		return DevDB()
+	} else {
+		return DefaultDB()
+	}
 }
 
 func DefaultDB() *DBClient {
-    return &DBClient{
-        redis: DefaultRedisDB(),
-    }
+	return &DBClient{
+		redis:   DefaultRedisDB(),
+		devMode: false,
+	}
 }
 
 func DevDB() *DBClient {
 	db := &DBClient{
-		redis: DevRedisDB(),
+		redis:   DevRedisDB(),
+		devMode: true,
 	}
 	AddDummy(db)
 	return db
@@ -60,4 +63,8 @@ func (db *DBClient) HeartPost(postID uint64) error {
 
 func (db *DBClient) FlagPost(postID uint64) error {
 	return db.FlagPostRedis(postID)
+}
+
+func (db *DBClient) CreateUser(username string, authkey []byte) (uint64, error) {
+	return db.CreateUserRedis(username, authkey)
 }

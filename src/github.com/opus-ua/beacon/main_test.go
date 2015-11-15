@@ -97,7 +97,7 @@ func TestPostBeacon(t *testing.T) {
 		t.Error(err.Error())
 	}
 	if !strings.Contains(string(respBody), "*high pitched squealing*") {
-		t.Error("Response did not contain correct content.")
+		t.Fatalf("Response did not contain correct content: \n%s", string(respBody))
 	}
 }
 

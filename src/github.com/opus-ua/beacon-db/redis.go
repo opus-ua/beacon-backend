@@ -11,8 +11,11 @@ import (
 )
 
 const (
-	REDIS_EXPIRE   = 86400 * time.Second
-	REDIS_INT_BASE = 36
+	REDIS_EXPIRE = 86400 * time.Second
+	// REDIS_EXPIRE   = -1
+	REDIS_INT_BASE    = 10
+	USERNAME_POOL_KEY = "usernames"
+	USER_COUNT_KEY    = "user-count"
 )
 
 func DefaultRedisDB() *redis.Client {
@@ -39,6 +42,10 @@ func GetRedisPostKey(id uint64) string {
 
 func GetRedisCommentListKey(id uint64) string {
 	return fmt.Sprintf("%s:c", GetRedisPostKey(id))
+}
+
+func GetRedisUserKey(id uint64) string {
+	return fmt.Sprintf("u:%d", id)
 }
 
 func RedisParseUInt64(res string, err error) (uint64, error) {
@@ -238,5 +245,44 @@ func (db *DBClient) FlagPostRedis(postID uint64) error {
 		return err
 	}
 	db.redis.Expire(key, REDIS_EXPIRE)
+	return nil
+}
+
+func (db *DBClient) CreateUserRedis(username string, authkey []byte) (uint64, error) {
+	if db.redis.SIsMember(USERNAME_POOL_KEY, username).Err() != nil {
+		return 0, errors.New("Username already exists.")
+	}
+	return db.AddUserRedis(username, authkey)
+}
+
+func (db *DBClient) AddUserRedis(username string, authkey []byte) (uint64, error) {
+	userIDSigned, err := db.redis.Incr(USER_COUNT_KEY).Result()
+	userID := uint64(userIDSigned)
+	if err != nil {
+		return 0, errors.New("Could not get number of users in db.")
+	}
+	if db.SetUserRedis(userID, username, authkey) != nil {
+		return 0, errors.New("Could not add user to db.")
+	}
+	if db.redis.SAdd(USERNAME_POOL_KEY, username).Err() != nil {
+		return 0, errors.New("Could not reserve username.")
+	}
+	return userID, nil
+}
+
+func (db *DBClient) SetUserRedis(userID uint64, username string, authkey []byte) error {
+	userKey := GetRedisUserKey(userID)
+	now := time.Now().Format(time.UnixDate)
+	res := db.redis.HMSet(userKey, "id", strconv.FormatUint(userID, REDIS_INT_BASE),
+		"username", username,
+		"created", now,
+		"flags-rec", "0",
+		"flags-sub", "0",
+		"hearts-rec", "0",
+		"hearts-sub", "0",
+		"auth", string(authkey))
+	if res.Err() != nil {
+		return res.Err()
+	}
 	return nil
 }
