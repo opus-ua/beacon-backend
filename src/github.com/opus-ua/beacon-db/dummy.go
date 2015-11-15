@@ -841,6 +841,9 @@ bc1ba23d88ad53d64ff785588bfd58a9f6f3ee0923ffd9
 `
 
 func AddDummy(db *DBClient) {
+	db.CreateUser("dev", []byte(""))
+	db.CreateUser("dev2", []byte(""))
+	db.CreateUser("dev3", []byte(""))
 	imgData := strings.Replace(dennyImgData, "\n", "", -1)
 	imgBytes, err := hex.DecodeString(imgData)
 	if err != nil {
@@ -853,31 +856,31 @@ func AddDummy(db *DBClient) {
 			Latitude:  33.219,
 			Longitude: -87.544,
 		},
-		PosterID:    1337,
+		PosterID:    1,
 		Description: "Denny chimes sure is cool, isn't it?",
 		Comments:    []Comment{},
 	}
-	id, err := db.AddBeacon(&beacon)
+	id, err := db.AddBeacon(&beacon, 1337)
 	if err != nil {
 		log.Printf("Could not add dummy to database.")
 		os.Exit(1)
 	}
 	commentA := Comment{
 		BeaconID: id,
-		PosterID: 1789,
+		PosterID: 2,
 		Text:     "You have zero sense of composition, bro.",
 	}
 	commentB := Comment{
 		BeaconID: id,
-		PosterID: 1776,
+		PosterID: 3,
 		Text:     "You have zero social skills, bro.",
 	}
-	err = db.AddCommentRedis(&commentA)
+	err = db.AddCommentRedis(&commentA, 2)
 	if err != nil {
 		log.Printf("Could not add dummy to database.")
 		os.Exit(1)
 	}
-	err = db.AddCommentRedis(&commentB)
+	err = db.AddCommentRedis(&commentB, 3)
 	if err != nil {
 		log.Printf("Could not add dummy to database.")
 		os.Exit(1)

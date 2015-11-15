@@ -57,7 +57,7 @@ var p Beacon = Beacon{
 }
 
 func TestAddBeacon(t *testing.T) {
-	_, err := db.AddBeacon(&p)
+	_, err := db.AddBeacon(&p, 1)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -89,8 +89,8 @@ var commentB Comment = Comment{
 }
 
 func TestAddComment(t *testing.T) {
-	db.AddComment(&commentA)
-	db.AddComment(&commentB)
+	db.AddComment(&commentA, 2)
+	db.AddComment(&commentB, 3)
 	commentListKey := "p:1:c"
 	res, err := client.LRange(commentListKey, 0, -1).Result()
 	if err != nil {
@@ -137,7 +137,7 @@ func TestGetBeacon(t *testing.T) {
 func TestHeartPost(t *testing.T) {
 	key := GetRedisPostKey(1)
 	RedisExpect(client.HGet(key, "hearts"), "5", t)
-	err := db.HeartPostRedis(1)
+	err := db.HeartPostRedis(1, 1)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -147,7 +147,7 @@ func TestHeartPost(t *testing.T) {
 func TestFlagPost(t *testing.T) {
 	key := GetRedisPostKey(1)
 	RedisExpect(client.HGet(key, "flags"), "1", t)
-	err := db.FlagPostRedis(1)
+	err := db.FlagPostRedis(1, 1)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -176,7 +176,7 @@ func TestSetUser(t *testing.T) {
 func BenchmarkAddBeaconRedis(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		p.Description = strconv.Itoa(i)
-		db.AddBeacon(&p)
+		db.AddBeacon(&p, 1)
 	}
 }
 

@@ -176,7 +176,7 @@ func (db *DBClient) GetThreadRedis(id uint64) (Beacon, error) {
 	return post, nil
 }
 
-func (db *DBClient) AddBeaconRedis(post *Beacon) (uint64, error) {
+func (db *DBClient) AddBeaconRedis(post *Beacon, userID uint64) (uint64, error) {
 	postID, err := db.redis.Incr("post-count").Result()
 	if postID < 0 {
 		return 0, errors.New("Retrieved post count was negative.")
@@ -201,7 +201,7 @@ func (db *DBClient) AddBeaconRedis(post *Beacon) (uint64, error) {
 	return post.ID, nil
 }
 
-func (db *DBClient) AddCommentRedis(comment *Comment) error {
+func (db *DBClient) AddCommentRedis(comment *Comment, userID uint64) error {
 	commentID, err := db.redis.Incr("post-count").Result()
 	if commentID < 0 {
 		return errors.New("Retrieved post count was negative.")
@@ -228,7 +228,7 @@ func (db *DBClient) AddCommentRedis(comment *Comment) error {
 	return nil
 }
 
-func (db *DBClient) HeartPostRedis(postID uint64) error {
+func (db *DBClient) HeartPostRedis(postID uint64, userID uint64) error {
 	key := GetRedisPostKey(postID)
 	_, err := db.redis.HIncrBy(key, "hearts", 1).Result()
 	if err != nil {
@@ -238,7 +238,7 @@ func (db *DBClient) HeartPostRedis(postID uint64) error {
 	return nil
 }
 
-func (db *DBClient) FlagPostRedis(postID uint64) error {
+func (db *DBClient) FlagPostRedis(postID uint64, userID uint64) error {
 	key := GetRedisPostKey(postID)
 	_, err := db.redis.HIncrBy(key, "flags", 1).Result()
 	if err != nil {

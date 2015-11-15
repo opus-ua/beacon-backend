@@ -14,6 +14,7 @@ import (
     "time"
     "io"
     "bytes"
+    "strconv"
     . "github.com/opus-ua/beacon-post"
     . "github.com/opus-ua/beacon-db"
 )
@@ -137,8 +138,39 @@ func ToRespBeaconMsg(beacon Beacon) RespBeaconMsg {
     }
 }
 
+func GetAuthenticationInfo(r *http.Request) (uint64, []byte, error) {
+    userIDStr, authKeyStr, ok := r.BasicAuth()
+    if !ok {
+        return 0, []byte{}, errors.New("Could not parse BasicAuth.")
+    }
+    userIDSigned, err := strconv.ParseInt(userIDStr, 10, 64)
+    if err != nil {
+        return 0, []byte{}, errors.New("Could not parse user ID as integer.")
+    }
+    userID := uint64(userIDSigned)
+    authKey := []byte(authKeyStr)
+    return userID, authKey, nil
+}
+
+func Authenticate(r *http.Request, db *DBClient) (uint64, error) {
+    userID, authKey, err := GetAuthenticationInfo(r)
+    if err != nil {
+        return 0, err
+    }
+    if !db.UserAuthenticated(userID, authKey) {
+        return 0, errors.New("Could not authenticate user.")
+    }
+    return userID, nil
+}
+
 func HandlePostBeacon(w http.ResponseWriter, r *http.Request, db *DBClient) {
     ip := r.RemoteAddr
+    userID, err := Authenticate(r, db)
+    if err != nil {
+        log.Printf(err.Error())
+        ErrorJSON(w, err.Error(), 400)
+        return
+    }
     mediaType, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
     if err != nil {
         log.Printf(err.Error())
@@ -175,7 +207,7 @@ func HandlePostBeacon(w http.ResponseWriter, r *http.Request, db *DBClient) {
         return
     }
     post.Image = img
-    id, err := db.AddBeacon(&post)
+    id, err := db.AddBeacon(&post, userID)
     if err != nil {
         ErrorJSON(w, "Database error.", 500)
         return
@@ -222,7 +254,13 @@ func HandleGetBeacon(w http.ResponseWriter, r *http.Request, id uint64, db *DBCl
 }
 
 func HandleHeartPost(w http.ResponseWriter, r *http.Request, id uint64, db *DBClient) {
-    err := db.HeartPost(id)
+    userID, err := Authenticate(r, db)
+    if err != nil {
+        log.Printf(err.Error())
+        ErrorJSON(w, err.Error(), 400)
+        return
+    }
+    err = db.HeartPost(id, userID)
     if err != nil {
         log.Printf(err.Error())
         ErrorJSON(w, "Could not heart post.", 500)
@@ -231,7 +269,13 @@ func HandleHeartPost(w http.ResponseWriter, r *http.Request, id uint64, db *DBCl
 }
 
 func HandleFlagPost(w http.ResponseWriter, r *http.Request, id uint64, db *DBClient) {
-    err := db.FlagPost(id)
+    userID, err := Authenticate(r, db)
+    if err != nil {
+        log.Printf(err.Error())
+        ErrorJSON(w, err.Error(), 400)
+        return
+    }
+    err = db.FlagPost(id, userID)
     if err != nil {
         log.Printf(err.Error())
         ErrorJSON(w, "Could not flag post.", 500)
