@@ -48,6 +48,10 @@ func GetRedisUserKey(id uint64) string {
 	return fmt.Sprintf("u:%d", id)
 }
 
+func GetRedisUserEmailKey(email string) string {
+    return fmt.Sprintf("email:%s", email)
+}
+
 func RedisParseUInt64(res string, err error) (uint64, error) {
 	if err != nil {
 		return 0, err
@@ -248,29 +252,32 @@ func (db *DBClient) FlagPostRedis(postID uint64, userID uint64) error {
 	return nil
 }
 
-func (db *DBClient) CreateUserRedis(username string, authkey []byte) (uint64, error) {
-	if db.redis.SIsMember(USERNAME_POOL_KEY, username).Err() != nil {
+func (db *DBClient) CreateUserRedis(username string, authkey []byte, email string) (uint64, error) {
+    if res, err := db.redis.SIsMember(USERNAME_POOL_KEY, username).Result(); res || err != nil {
 		return 0, errors.New("Username already exists.")
 	}
-	return db.AddUserRedis(username, authkey)
+	return db.AddUserRedis(username, authkey, email)
 }
 
-func (db *DBClient) AddUserRedis(username string, authkey []byte) (uint64, error) {
+func (db *DBClient) AddUserRedis(username string, authkey []byte, email string) (uint64, error) {
 	userIDSigned, err := db.redis.Incr(USER_COUNT_KEY).Result()
 	userID := uint64(userIDSigned)
 	if err != nil {
 		return 0, errors.New("Could not get number of users in db.")
 	}
-	if db.SetUserRedis(userID, username, authkey) != nil {
+	if db.SetUserRedis(userID, username, authkey, email) != nil {
 		return 0, errors.New("Could not add user to db.")
 	}
 	if db.redis.SAdd(USERNAME_POOL_KEY, username).Err() != nil {
 		return 0, errors.New("Could not reserve username.")
 	}
+    if db.redis.Set(GetRedisUserEmailKey(email), userID, 0).Err() != nil {
+        return 0, errors.New("Could not add email to pool.")
+    }
 	return userID, nil
 }
 
-func (db *DBClient) SetUserRedis(userID uint64, username string, authkey []byte) error {
+func (db *DBClient) SetUserRedis(userID uint64, username string, authkey []byte, email string) error {
 	userKey := GetRedisUserKey(userID)
 	now := time.Now().Format(time.UnixDate)
 	res := db.redis.HMSet(userKey, "id", strconv.FormatUint(userID, REDIS_INT_BASE),
@@ -280,26 +287,62 @@ func (db *DBClient) SetUserRedis(userID uint64, username string, authkey []byte)
 		"flags-sub", "0",
 		"hearts-rec", "0",
 		"hearts-sub", "0",
-		"auth", string(authkey))
+		"auth", string(authkey),
+        "email", email)
 	if res.Err() != nil {
 		return res.Err()
 	}
 	return nil
 }
 
-func (db *DBClient) UserExistsRedis(userid uint64) bool {
+func (db *DBClient) UserExistsRedis(userid uint64) (bool, error) {
 	res, err := db.redis.Exists(GetRedisUserKey(userid)).Result()
 	if err != nil {
-		return false
+		return false, err
 	}
-	return res
+	return res, nil
 }
 
-func (db *DBClient) UserAuthenticatedRedis(userid uint64, authkey []byte) bool {
-	// implement actual check later
-	return true
+func (db *DBClient) UsernameExistsRedis(username string) (bool, error) {
+    res, err := db.redis.SIsMember(USERNAME_POOL_KEY, username).Result()
+    if err != nil {
+        return false, err
+    }
+    return res, nil
+}
+
+func (db *DBClient) EmailExistsRedis(email string) (bool, error) {
+    res, err := db.redis.Exists(GetRedisUserEmailKey(email)).Result()
+    if err != nil {
+        return false, err
+    }
+    return res, nil
+}
+
+func (db *DBClient) GetUserIDByEmailRedis(email string) (uint64, error) {
+    res, err := db.redis.Get(GetRedisUserEmailKey(email)).Result()
+    if err != nil {
+        return 0, err
+    }
+    id, err := RedisParseUInt64(res, nil)
+    if err != nil {
+        return 0, err
+    }
+    return id, nil
+}
+
+func (db *DBClient) UserAuthenticatedRedis(userid uint64, authkey []byte) (bool, error) {
+    storedKey, err := db.redis.HGet(GetRedisUserKey(userid), "auth").Result()
+    if err != nil {
+        return false, err
+    }
+    return storedKey == string(authkey), nil
 }
 
 func (db *DBClient) GetUsernameRedis(userid uint64) (string, error) {
 	return db.redis.HGet(GetRedisUserKey(userid), "username").Result()
+}
+
+func (db *DBClient) SetUserAuthKeyRedis(userid uint64, authkey []byte) error {
+    return db.redis.HSet(GetRedisUserKey(userid), "auth", string(authkey)).Err()
 }

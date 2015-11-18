@@ -19,6 +19,7 @@ import (
     . "github.com/opus-ua/beacon-db"
 )
 
+
 const (
     MAX_IMG_BYTES = 1 << 22
 )
@@ -55,6 +56,28 @@ type RespBeaconMsg struct {
     SubmitBeaconMsg
     RespPostMsg
     Comments    []RespCommentMsg `json:"comments"`
+}
+
+type CreateAccountReqMsg struct {
+    Username string `json:"username"`
+    Secret   string `json:"secret"`
+    Token   string `json:"token"`
+}
+
+type CreateAccountRespMsg struct {
+    ID uint64 `json:"id"`
+}
+
+type GoogleAuthRespMsg struct {
+    Iss string `json:"iss"`
+    Sub string `json:"sub"`
+    Azp string `json:"azp"`
+    Email string `json:"email"`
+    AtHash string `json:"at_hash"`
+    EmailVerified string `json:"email_verified"`
+    Aud string `json:"aud"`
+    Iat string `json:"iat"`
+    Exp string `json:"exp"`
 }
 
 type JSONError struct {
@@ -97,7 +120,8 @@ func GetPostBeaconImg(w http.ResponseWriter, part *multipart.Part, ip string) ([
         ErrorJSON(w, "Unable to read submitted image.", 500)
         return []byte{}, errors.New(msg)
     }
-    return imgBytes, nil }
+    return imgBytes, nil
+}
 
 func ToRespCommentMsg(comment Comment) RespCommentMsg {
     return RespCommentMsg{
@@ -157,7 +181,7 @@ func Authenticate(r *http.Request, db *DBClient) (uint64, error) {
     if err != nil {
         return 0, err
     }
-    if !db.UserAuthenticated(userID, authKey) {
+    if authed, err := db.UserAuthenticated(userID, authKey); !authed || err != nil {
         return 0, errors.New("Could not authenticate user.")
     }
     return userID, nil
@@ -280,5 +304,81 @@ func HandleFlagPost(w http.ResponseWriter, r *http.Request, id uint64, db *DBCli
         log.Printf(err.Error())
         ErrorJSON(w, "Could not flag post.", 500)
     }
+    w.WriteHeader(200)
+}
+
+func HandleCreateAccount(w http.ResponseWriter, r *http.Request, googleID string, db *DBClient) {
+    log.Printf("Google ID: %s", googleID)
+    decoder := json.NewDecoder(r.Body)
+    var accountReq CreateAccountReqMsg
+    decoder.Decode(&accountReq)
+    if exists, err := db.UsernameExists(accountReq.Username); exists || err != nil {
+        log.Printf("Username '%s' already exists.", accountReq.Username)
+        ErrorJSON(w, "Username already exists.", 400)
+        return
+    }
+    url := "https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=" + accountReq.Token
+    res, err := http.Get(url)
+    if err != nil {
+        log.Printf(err.Error())
+        ErrorJSON(w, "Failed to authenticate Google account.", 500)
+        return
+    }
+    if res.StatusCode != 200 {
+        log.Printf("Account authentication failure.")
+        ErrorJSON(w, "Failed to authenticate Google account.", 500)
+        return
+    }
+    body, err := ioutil.ReadAll(res.Body)
+    if err != nil {
+        log.Printf("Account authentication failure.")
+        ErrorJSON(w, "Failed to authenticate Google account.", 500)
+        return
+    }
+    var googleAuth GoogleAuthRespMsg
+    err = json.Unmarshal(body, &googleAuth)
+    if err != nil {
+        log.Printf("Account authentication failure. (json unmarshal)")
+        ErrorJSON(w, "Failed to authenticate Google account.", 500)
+        return
+    }
+    if googleAuth.Aud != googleID {
+        log.Printf("App ID does not match beacon's.")
+        log.Printf("Our ID: %s", googleID)
+        log.Printf("Received ID: %s", googleAuth.Aud)
+        ErrorJSON(w, "Failed to authenticate Google account", 400)
+        return
+    }
+    log.Printf("Successfully authenticated.")
+    var id uint64
+    if exists, err := db.EmailExists(googleAuth.Email); exists || err != nil {
+        id, err = db.GetUserIDByEmail(googleAuth.Email)
+        if err != nil {
+            log.Printf("Could not find user by email.")
+            ErrorJSON(w, "Failed to locate user by email.", 500)
+            return
+        }
+        err = db.SetUserAuthKey(id, []byte(accountReq.Secret))
+        if err != nil {
+            log.Printf("Could not set user authorization.")
+            ErrorJSON(w, "Failed to set user authorization.", 500)
+            return
+        }
+    } else {
+        id, err = db.CreateUser(accountReq.Username, []byte(accountReq.Secret), googleAuth.Email)
+        if err != nil {
+            log.Printf("Could not create new user.")
+            ErrorJSON(w, "Failed to create new user.", 500)
+            return
+        }
+    }
+    respMsg := CreateAccountRespMsg{ID: id}
+    respJson, err := json.Marshal(respMsg)
+    if err != nil {
+        log.Printf("Could not marshal JSON response.")
+        ErrorJSON(w, "Failed to marshal response JSON.", 500)
+        return
+    }
+    io.WriteString(w, string(respJson))
     w.WriteHeader(200)
 }

@@ -13,6 +13,7 @@ type User struct {
 	FlagsSubmitted  uint32
 	HeartsSubmitted uint32
 	AuthKey         []byte
+    Email           string
 }
 
 type UserProfile struct {

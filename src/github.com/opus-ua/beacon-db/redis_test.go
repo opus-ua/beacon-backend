@@ -155,7 +155,7 @@ func TestFlagPost(t *testing.T) {
 }
 
 func TestSetUser(t *testing.T) {
-	if _, err := db.CreateUserRedis("test-user", []byte("")); err != nil {
+	if _, err := db.CreateUserRedis("test-user", []byte(""), "anonymous@gmail.com"); err != nil {
 		t.Fatalf(err.Error())
 	}
 	key := "u:1"

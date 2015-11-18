@@ -5,7 +5,8 @@ SRC=$(shell find ./src -name "*.go")
 VERSION_NUMBER=0.0.0
 GOPATH:=$(GOPATH):`pwd`
 HASH:=$(shell git rev-parse HEAD)
-LDFLAGS=-X main.version=$(VERSION_NUMBER) -X main.gitHash=$(HASH)
+GOOGLE_ID:=$(shell cat google.id)
+LDFLAGS=-X main.version=$(VERSION_NUMBER) -X main.gitHash=$(HASH) -X main.googleID=$(GOOGLE_ID)
 
 bin/beacon: $(SRC)
 	mkdir -p bin

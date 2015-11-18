@@ -65,24 +65,40 @@ func (db *DBClient) FlagPost(postID uint64, userID uint64) error {
 	return db.FlagPostRedis(postID, userID)
 }
 
-func (db *DBClient) CreateUser(username string, authkey []byte) (uint64, error) {
-	return db.CreateUserRedis(username, authkey)
+func (db *DBClient) CreateUser(username string, authkey []byte, email string) (uint64, error) {
+	return db.CreateUserRedis(username, authkey, email)
 }
 
-func (db *DBClient) UserExists(userid uint64) bool {
+func (db *DBClient) UserExists(userid uint64) (bool, error) {
 	return db.UserExistsRedis(userid)
 }
 
-func (db *DBClient) UserAuthenticated(userid uint64, authkey []byte) bool {
-	if !db.UserExists(userid) {
-		return false
+func (db *DBClient) UserAuthenticated(userid uint64, authkey []byte) (bool, error) {
+    if exists, _ := db.UserExists(userid); !exists {
+		return false, nil
 	}
 	if db.devMode {
-		return true
+		return true, nil
 	}
 	return db.UserAuthenticatedRedis(userid, authkey)
 }
 
 func (db *DBClient) GetUsername(userid uint64) (string, error) {
 	return db.GetUsernameRedis(userid)
+}
+
+func (db *DBClient) UsernameExists(username string) (bool, error) {
+    return db.UsernameExistsRedis(username)
+}
+
+func (db *DBClient) EmailExists(email string) (bool, error) {
+    return db.EmailExistsRedis(email)
+}
+
+func (db *DBClient) GetUserIDByEmail(email string) (uint64, error) {
+    return db.GetUserIDByEmailRedis(email)
+}
+
+func (db *DBClient) SetUserAuthKey(userid uint64, authkey []byte) error {
+    return db.SetUserAuthKeyRedis(userid, authkey)
 }

@@ -2,6 +2,18 @@ Please bear in mind that this document is under heavy
 construction and is likely to change often and greatly.
 The beacon backend provides the following endpoints.
 
+## Configuration
+
+The beacon backend requires an ID from Google in order to
+integrate with Google sign-in. There are more detailed
+instructions in the frontend's README on how to get such an
+ID from Google. This ID should end in 
+```apps.googleusercontent.com```. Take this ID and make it
+the sole content of a new file ```google.id``` at the root
+directory of the backend (no spaces or newlines). During the
+build process, this ID will be incorporated into the binary
+and used to verify new accounts.
+
 ## Posting a Beacon
 
 Use the following REST request to post a beacon.
@@ -125,6 +137,34 @@ In response, you will receive a 200 OK if nothing has gone wrong.
 
 ```http
 HTTP/1.1 200 OK
+```
+
+## Creating an account
+
+Send a POST to /createaccount in order to create a new account.
+Note that this is the only POST endpoint that does not require
+BasicAuth.
+
+```http
+POST /createaccount
+Content-Type: application/json
+
+{
+    "token": "....apps.googleusercontent.com",
+}
+```
+
+You will receive a ``200 OK`` if the request is successful.
+The request will fail if the username is taken or if the Google
+account has already been used to open a Beacon account.
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+    "id": 24601
+}
 ```
 
 ## General Errors
