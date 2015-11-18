@@ -150,6 +150,7 @@ POST /createaccount
 Content-Type: application/json
 
 {
+    "username": "dexter",
     "token": "....apps.googleusercontent.com",
 }
 ```
@@ -158,12 +159,17 @@ You will receive a ``200 OK`` if the request is successful.
 The request will fail if the username is taken or if the Google
 account has already been used to open a Beacon account.
 
+Along with the ```200 OK```, you will receive your user ID
+and the secret. This pair will be used with http BasicAuth
+for all future posts.
+
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 
 {
-    "id": 24601
+    "id": 24601,
+    "secret": "3SECRET5U"
 }
 ```
 

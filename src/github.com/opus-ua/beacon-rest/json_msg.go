@@ -15,6 +15,7 @@ import (
     "io"
     "bytes"
     "strconv"
+    "crypto/rand"
     . "github.com/opus-ua/beacon-post"
     . "github.com/opus-ua/beacon-db"
 )
@@ -60,12 +61,12 @@ type RespBeaconMsg struct {
 
 type CreateAccountReqMsg struct {
     Username string `json:"username"`
-    Secret   string `json:"secret"`
     Token   string `json:"token"`
 }
 
 type CreateAccountRespMsg struct {
     ID uint64 `json:"id"`
+    Secret string `json:"secret"`
 }
 
 type GoogleAuthRespMsg struct {
@@ -307,16 +308,25 @@ func HandleFlagPost(w http.ResponseWriter, r *http.Request, id uint64, db *DBCli
     w.WriteHeader(200)
 }
 
+func GenerateSecret() (string, error) {
+    const secretLen = 50
+    const characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" 
+    buf := make([]byte, secretLen)
+    _, err := rand.Read(buf)
+    if err != nil {
+        return "", err
+    }
+    for i := 0; i < secretLen; i++ {
+       buf[i] = characters[int(buf[i]) % len(characters)] 
+    }
+    return string(buf), nil
+}
+
 func HandleCreateAccount(w http.ResponseWriter, r *http.Request, googleID string, db *DBClient) {
     log.Printf("Google ID: %s", googleID)
     decoder := json.NewDecoder(r.Body)
     var accountReq CreateAccountReqMsg
     decoder.Decode(&accountReq)
-    if exists, err := db.UsernameExists(accountReq.Username); exists || err != nil {
-        log.Printf("Username '%s' already exists.", accountReq.Username)
-        ErrorJSON(w, "Username already exists.", 400)
-        return
-    }
     url := "https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=" + accountReq.Token
     res, err := http.Get(url)
     if err != nil {
@@ -349,6 +359,10 @@ func HandleCreateAccount(w http.ResponseWriter, r *http.Request, googleID string
         ErrorJSON(w, "Failed to authenticate Google account", 400)
         return
     }
+    secret, err := GenerateSecret()
+    if err != nil {
+        log.Printf("Failed to generate secret.")
+    }
     log.Printf("Successfully authenticated.")
     var id uint64
     if exists, err := db.EmailExists(googleAuth.Email); exists || err != nil {
@@ -358,21 +372,26 @@ func HandleCreateAccount(w http.ResponseWriter, r *http.Request, googleID string
             ErrorJSON(w, "Failed to locate user by email.", 500)
             return
         }
-        err = db.SetUserAuthKey(id, []byte(accountReq.Secret))
+        err = db.SetUserAuthKey(id, []byte(secret))
         if err != nil {
             log.Printf("Could not set user authorization.")
             ErrorJSON(w, "Failed to set user authorization.", 500)
             return
         }
     } else {
-        id, err = db.CreateUser(accountReq.Username, []byte(accountReq.Secret), googleAuth.Email)
+        if exists, err := db.UsernameExists(accountReq.Username); exists || err != nil {
+            log.Printf("Username '%s' already exists.", accountReq.Username)
+            ErrorJSON(w, "Username already exists.", 400)
+            return
+        }
+        id, err = db.CreateUser(accountReq.Username, []byte(secret), googleAuth.Email)
         if err != nil {
             log.Printf("Could not create new user.")
             ErrorJSON(w, "Failed to create new user.", 500)
             return
         }
     }
-    respMsg := CreateAccountRespMsg{ID: id}
+    respMsg := CreateAccountRespMsg{ID: id, Secret: secret}
     respJson, err := json.Marshal(respMsg)
     if err != nil {
         log.Printf("Could not marshal JSON response.")
@@ -380,5 +399,4 @@ func HandleCreateAccount(w http.ResponseWriter, r *http.Request, googleID string
         return
     }
     io.WriteString(w, string(respJson))
-    w.WriteHeader(200)
 }
