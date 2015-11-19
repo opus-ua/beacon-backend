@@ -209,7 +209,7 @@ func (db *DBClient) AddBeaconRedis(post *Beacon, userID uint64) (uint64, error) 
 		"flags", strconv.FormatUint(uint64(post.Flags), REDIS_INT_BASE),
 		"time", now,
 		"type", "beacon")
-	db.redis.Expire(key, REDIS_EXPIRE)
+	// db.redis.Expire(key, REDIS_EXPIRE)
 	return post.ID, nil
 }
 
@@ -222,7 +222,7 @@ func (db *DBClient) AddCommentRedis(comment *Comment, userID uint64) error {
 	if err != nil {
 		return err
 	}
-	beaconKey := GetRedisPostKey(comment.BeaconID)
+	// beaconKey := GetRedisPostKey(comment.BeaconID)
 	IDKey := GetRedisCommentListKey(comment.BeaconID)
 	db.redis.RPush(IDKey, strconv.FormatUint(comment.ID, REDIS_INT_BASE))
 	commKey := GetRedisPostKey(comment.ID)
@@ -234,9 +234,9 @@ func (db *DBClient) AddCommentRedis(comment *Comment, userID uint64) error {
 		"flags", strconv.FormatUint(uint64(comment.Flags), REDIS_INT_BASE),
 		"time", now,
 		"type", "comment")
-	db.redis.Expire(beaconKey, REDIS_EXPIRE)
-	db.redis.Expire(IDKey, REDIS_EXPIRE)
-	db.redis.Expire(commKey, REDIS_EXPIRE)
+	// db.redis.Expire(beaconKey, REDIS_EXPIRE)
+	// db.redis.Expire(IDKey, REDIS_EXPIRE)
+	// db.redis.Expire(commKey, REDIS_EXPIRE)
 	return nil
 }
 
@@ -256,7 +256,7 @@ func (db *DBClient) HeartPostRedis(postID uint64, userID uint64) error {
 	if err != nil {
 		return err
 	}
-	db.redis.Expire(key, REDIS_EXPIRE)
+	// db.redis.Expire(key, REDIS_EXPIRE)
 	return nil
 }
 
@@ -276,7 +276,7 @@ func (db *DBClient) UnheartPostRedis(postID uint64, userID uint64) error {
 	if err != nil {
 		return err
 	}
-	db.redis.Expire(key, REDIS_EXPIRE)
+	// db.redis.Expire(key, REDIS_EXPIRE)
 	return nil
 
 }
@@ -297,7 +297,7 @@ func (db *DBClient) FlagPostRedis(postID uint64, userID uint64) error {
 	if err != nil {
 		return err
 	}
-	db.redis.Expire(key, REDIS_EXPIRE)
+	// db.redis.Expire(key, REDIS_EXPIRE)
 	return nil
 }
 
