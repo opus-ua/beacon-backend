@@ -49,7 +49,7 @@ func GetRedisUserKey(id uint64) string {
 }
 
 func GetRedisUserEmailKey(email string) string {
-    return fmt.Sprintf("email:%s", email)
+	return fmt.Sprintf("email:%s", email)
 }
 
 func RedisParseUInt64(res string, err error) (uint64, error) {
@@ -253,7 +253,7 @@ func (db *DBClient) FlagPostRedis(postID uint64, userID uint64) error {
 }
 
 func (db *DBClient) CreateUserRedis(username string, authkey []byte, email string) (uint64, error) {
-    if res, err := db.redis.SIsMember(USERNAME_POOL_KEY, username).Result(); res || err != nil {
+	if res, err := db.redis.SIsMember(USERNAME_POOL_KEY, username).Result(); res || err != nil {
 		return 0, errors.New("Username already exists.")
 	}
 	return db.AddUserRedis(username, authkey, email)
@@ -271,9 +271,9 @@ func (db *DBClient) AddUserRedis(username string, authkey []byte, email string) 
 	if db.redis.SAdd(USERNAME_POOL_KEY, username).Err() != nil {
 		return 0, errors.New("Could not reserve username.")
 	}
-    if db.redis.Set(GetRedisUserEmailKey(email), userID, 0).Err() != nil {
-        return 0, errors.New("Could not add email to pool.")
-    }
+	if db.redis.Set(GetRedisUserEmailKey(email), userID, 0).Err() != nil {
+		return 0, errors.New("Could not add email to pool.")
+	}
 	return userID, nil
 }
 
@@ -288,7 +288,7 @@ func (db *DBClient) SetUserRedis(userID uint64, username string, authkey []byte,
 		"hearts-rec", "0",
 		"hearts-sub", "0",
 		"auth", string(authkey),
-        "email", email)
+		"email", email)
 	if res.Err() != nil {
 		return res.Err()
 	}
@@ -304,39 +304,39 @@ func (db *DBClient) UserExistsRedis(userid uint64) (bool, error) {
 }
 
 func (db *DBClient) UsernameExistsRedis(username string) (bool, error) {
-    res, err := db.redis.SIsMember(USERNAME_POOL_KEY, username).Result()
-    if err != nil {
-        return false, err
-    }
-    return res, nil
+	res, err := db.redis.SIsMember(USERNAME_POOL_KEY, username).Result()
+	if err != nil {
+		return false, err
+	}
+	return res, nil
 }
 
 func (db *DBClient) EmailExistsRedis(email string) (bool, error) {
-    res, err := db.redis.Exists(GetRedisUserEmailKey(email)).Result()
-    if err != nil {
-        return false, err
-    }
-    return res, nil
+	res, err := db.redis.Exists(GetRedisUserEmailKey(email)).Result()
+	if err != nil {
+		return false, err
+	}
+	return res, nil
 }
 
 func (db *DBClient) GetUserIDByEmailRedis(email string) (uint64, error) {
-    res, err := db.redis.Get(GetRedisUserEmailKey(email)).Result()
-    if err != nil {
-        return 0, err
-    }
-    id, err := RedisParseUInt64(res, nil)
-    if err != nil {
-        return 0, err
-    }
-    return id, nil
+	res, err := db.redis.Get(GetRedisUserEmailKey(email)).Result()
+	if err != nil {
+		return 0, err
+	}
+	id, err := RedisParseUInt64(res, nil)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
 }
 
 func (db *DBClient) UserAuthenticatedRedis(userid uint64, authkey []byte) (bool, error) {
-    storedKey, err := db.redis.HGet(GetRedisUserKey(userid), "auth").Result()
-    if err != nil {
-        return false, err
-    }
-    return storedKey == string(authkey), nil
+	storedKey, err := db.redis.HGet(GetRedisUserKey(userid), "auth").Result()
+	if err != nil {
+		return false, err
+	}
+	return storedKey == string(authkey), nil
 }
 
 func (db *DBClient) GetUsernameRedis(userid uint64) (string, error) {
@@ -344,5 +344,5 @@ func (db *DBClient) GetUsernameRedis(userid uint64) (string, error) {
 }
 
 func (db *DBClient) SetUserAuthKeyRedis(userid uint64, authkey []byte) error {
-    return db.redis.HSet(GetRedisUserKey(userid), "auth", string(authkey)).Err()
+	return db.redis.HSet(GetRedisUserKey(userid), "auth", string(authkey)).Err()
 }

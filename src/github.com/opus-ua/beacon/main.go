@@ -79,13 +79,13 @@ func StartServer(dev bool) {
 			ErrorJSON(w, "Only method POST supported.", 400)
 		}
 	})
-    mux.HandleFunc("/createaccount", func(w http.ResponseWriter, r *http.Request) {
-        if r.Method == "POST" {
-            HandleCreateAccount(w, r, googleID, db)
-        } else {
-            ErrorJSON(w, "Only method POST supported.", 400)
-        }
-    })
+	mux.HandleFunc("/createaccount", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			HandleCreateAccount(w, r, googleID, db)
+		} else {
+			ErrorJSON(w, "Only method POST supported.", 400)
+		}
+	})
 	mux.HandleFunc("/beacon/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
 			splitURI := strings.Split(r.RequestURI, "/")

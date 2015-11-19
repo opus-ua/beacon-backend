@@ -74,7 +74,7 @@ func (db *DBClient) UserExists(userid uint64) (bool, error) {
 }
 
 func (db *DBClient) UserAuthenticated(userid uint64, authkey []byte) (bool, error) {
-    if exists, _ := db.UserExists(userid); !exists {
+	if exists, _ := db.UserExists(userid); !exists {
 		return false, nil
 	}
 	if db.devMode {
@@ -88,17 +88,17 @@ func (db *DBClient) GetUsername(userid uint64) (string, error) {
 }
 
 func (db *DBClient) UsernameExists(username string) (bool, error) {
-    return db.UsernameExistsRedis(username)
+	return db.UsernameExistsRedis(username)
 }
 
 func (db *DBClient) EmailExists(email string) (bool, error) {
-    return db.EmailExistsRedis(email)
+	return db.EmailExistsRedis(email)
 }
 
 func (db *DBClient) GetUserIDByEmail(email string) (uint64, error) {
-    return db.GetUserIDByEmailRedis(email)
+	return db.GetUserIDByEmailRedis(email)
 }
 
 func (db *DBClient) SetUserAuthKey(userid uint64, authkey []byte) error {
-    return db.SetUserAuthKeyRedis(userid, authkey)
+	return db.SetUserAuthKeyRedis(userid, authkey)
 }
