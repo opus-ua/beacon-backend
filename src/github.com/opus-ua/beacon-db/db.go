@@ -61,6 +61,10 @@ func (db *DBClient) HeartPost(postID uint64, userID uint64) error {
 	return db.HeartPostRedis(postID, userID)
 }
 
+func (db *DBClient) UnheartPost(postID uint64, userID uint64) error {
+	return db.UnheartPostRedis(postID, userID)
+}
+
 func (db *DBClient) FlagPost(postID uint64, userID uint64) error {
 	return db.FlagPostRedis(postID, userID)
 }
@@ -101,4 +105,8 @@ func (db *DBClient) GetUserIDByEmail(email string) (uint64, error) {
 
 func (db *DBClient) SetUserAuthKey(userid uint64, authkey []byte) error {
 	return db.SetUserAuthKeyRedis(userid, authkey)
+}
+
+func (db *DBClient) HasHearted(postid uint64, userid uint64) (bool, error) {
+	return db.HasHeartedRedis(postid, userid)
 }

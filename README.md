@@ -71,6 +71,10 @@ GET /beacon/1 HTTP/1.1
 The 1 above may be replaced by the id of any beacon.
 You will receive the following response.
 
+Note that if you supply BasicAuth, the backend will
+report which posts you've hearted. Otherwise, all
+```hearted``` fields will be false.
+
 ```http
 HTTP/1.1 200 OK
 Content-Type: multipart/form-data; boundary=793d63336
@@ -86,20 +90,23 @@ Content-Type: application/json
     "latitude": 45.0,
     "longitude": 45.0,
     "time": "Sat Nov. 7 21:13:22 CST 2015",
+    "hearted": true,
     "comments": [
         {
             "id": 2,
             "user": 54321,
             "text": "This post is bad and you should feel bad.",
             "hearts": 7,
-            "time": "Sat Nov. 7 21:13:33 CST 2015"
+            "time": "Sat Nov. 7 21:13:33 CST 2015",
+            "hearted": false,
         },
         {
             "id": 3,
             "user": 12345,
             "text": "No, people. Let's be smart and bring it off.",
             "hearts": 5,
-            "time": "Sat Nov. 7 21:13:57 CST 2015"
+            "time": "Sat Nov. 7 21:13:57 CST 2015",
+            "hearted": false,
         }
     ]
 }

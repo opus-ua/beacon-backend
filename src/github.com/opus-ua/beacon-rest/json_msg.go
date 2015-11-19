@@ -35,6 +35,7 @@ type RespPostMsg struct {
     Hearts      uint32 `json:"hearts"`
     Time        string `json:"time"`
     Username    string `json:"username"`
+    Hearted     bool   `json:"hearted"`
 }
 
 type LocationMsg struct {
@@ -125,11 +126,21 @@ func GetPostBeaconImg(w http.ResponseWriter, part *multipart.Part, ip string) ([
     return imgBytes, nil
 }
 
-func ToRespCommentMsg(comment Comment, db *DBClient) (RespCommentMsg, error) {
+func ToRespCommentMsg(comment Comment, viewerID int64, db *DBClient) (RespCommentMsg, error) {
     username, err := db.GetUsername(comment.PosterID)
     if err != nil {
         return RespCommentMsg{}, err
     }
+    var hearted bool
+    if viewerID >= 0 {
+        hearted, err = db.HasHearted(comment.ID, uint64(viewerID))
+        if err != nil {
+            return RespCommentMsg{}, err
+        }
+    } else {
+        hearted = false
+    }
+    log.Printf("Comment hearted: %t", hearted)
     return RespCommentMsg{
         SubmitCommentMsg: SubmitCommentMsg{
             Id:     comment.ID,
@@ -140,18 +151,29 @@ func ToRespCommentMsg(comment Comment, db *DBClient) (RespCommentMsg, error) {
             Hearts: comment.Hearts,
             Time:   comment.Time.Format(time.UnixDate),
             Username: username,
+            Hearted: hearted,
         },
     }, nil
 }
 
-func ToRespBeaconMsg(beacon Beacon, db *DBClient) (RespBeaconMsg, error) {
+func ToRespBeaconMsg(beacon Beacon, viewerID int64, db *DBClient) (RespBeaconMsg, error) {
     username, err := db.GetUsername(beacon.PosterID)
     if err != nil {
         return RespBeaconMsg{}, err
     }
+    var hearted bool
+    if viewerID >= 0 {
+        hearted, err = db.HasHearted(beacon.ID, uint64(viewerID))
+        if err != nil {
+            return RespBeaconMsg{}, err
+        }
+    } else {
+        hearted = false
+    }
+    log.Printf("Beacon hearted: %t", hearted)
     comments := []RespCommentMsg{}
     for _, comment := range beacon.Comments {
-        commentMsg, err := ToRespCommentMsg(comment, db)
+        commentMsg, err := ToRespCommentMsg(comment, viewerID, db)
         if err != nil {
             return RespBeaconMsg{}, err
         }
@@ -173,6 +195,7 @@ func ToRespBeaconMsg(beacon Beacon, db *DBClient) (RespBeaconMsg, error) {
             Hearts:     beacon.Hearts,
             Time:       beacon.Time.Format(time.UnixDate),
             Username:   username,
+            Hearted:    hearted,
         },
         Comments:   comments,
     }, nil
@@ -253,7 +276,7 @@ func HandlePostBeacon(w http.ResponseWriter, r *http.Request, db *DBClient) {
         return
     }
     postedBeacon, err := db.GetThread(id)
-    respBeaconMsg, err := ToRespBeaconMsg(postedBeacon, db)
+    respBeaconMsg, err := ToRespBeaconMsg(postedBeacon, int64(userID), db)
     if err != nil {
         ErrorJSON(w, "Database error.", 500)
         return
@@ -267,12 +290,18 @@ func HandlePostBeacon(w http.ResponseWriter, r *http.Request, db *DBClient) {
 }
 
 func HandleGetBeacon(w http.ResponseWriter, r *http.Request, id uint64, db *DBClient) {
+    var viewerID int64
+    viewerIDu, err := Authenticate(r, db)
+    viewerID = int64(viewerIDu)
+    if err != nil {
+        viewerID = -1
+    }
     beacon, err := db.GetThread(id)
     if err != nil {
         ErrorJSON(w, "Could not retrieve post from db.", 404)
         return
     }
-    respBeaconMsg, err := ToRespBeaconMsg(beacon, db)
+    respBeaconMsg, err := ToRespBeaconMsg(beacon, viewerID, db)
     if err != nil {
         ErrorJSON(w, "Database error.", 500)
         return
@@ -312,6 +341,23 @@ func HandleHeartPost(w http.ResponseWriter, r *http.Request, id uint64, db *DBCl
     if err != nil {
         log.Printf(err.Error())
         ErrorJSON(w, "Could not heart post.", 500)
+        return;
+    }
+    w.WriteHeader(200)
+}
+
+func HandleUnheartPost(w http.ResponseWriter, r *http.Request, id uint64, db *DBClient) {
+    userID, err := Authenticate(r, db)
+    if err != nil {
+        log.Printf(err.Error())
+        ErrorJSON(w, err.Error(), 400)
+        return
+    }
+    err = db.UnheartPost(id, userID)
+    if err != nil {
+        log.Printf(err.Error())
+        ErrorJSON(w, "Could not unheart post.", 500)
+        return;
     }
     w.WriteHeader(200)
 }
@@ -327,6 +373,7 @@ func HandleFlagPost(w http.ResponseWriter, r *http.Request, id uint64, db *DBCli
     if err != nil {
         log.Printf(err.Error())
         ErrorJSON(w, "Could not flag post.", 500)
+        return;
     }
     w.WriteHeader(200)
 }
