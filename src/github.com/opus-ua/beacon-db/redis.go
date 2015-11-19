@@ -52,6 +52,14 @@ func GetRedisUserEmailKey(email string) string {
 	return fmt.Sprintf("email:%s", email)
 }
 
+func GetRedisUserHeartedKey(postid uint64) string {
+    return fmt.Sprintf("h:%d", postid)
+}
+
+func GetRedisUserFlaggedKey(postid uint64) string {
+    return fmt.Sprintf("f:%d", postid)
+}
+
 func RedisParseUInt64(res string, err error) (uint64, error) {
 	if err != nil {
 		return 0, err
@@ -233,8 +241,18 @@ func (db *DBClient) AddCommentRedis(comment *Comment, userID uint64) error {
 }
 
 func (db *DBClient) HeartPostRedis(postID uint64, userID uint64) error {
+    poolKey := GetRedisUserHeartedKey(postID)
+    setMem := fmt.Sprintf("%d", userID)
+    res, err := db.redis.SIsMember(poolKey, setMem).Result()
+    if res || err != nil {
+        return errors.New("Post has already been hearted.")
+    }
+    _, err = db.redis.SAdd(poolKey, setMem).Result()
+    if err != nil {
+        return err
+    }
 	key := GetRedisPostKey(postID)
-	_, err := db.redis.HIncrBy(key, "hearts", 1).Result()
+	_, err = db.redis.HIncrBy(key, "hearts", 1).Result()
 	if err != nil {
 		return err
 	}
@@ -243,8 +261,18 @@ func (db *DBClient) HeartPostRedis(postID uint64, userID uint64) error {
 }
 
 func (db *DBClient) FlagPostRedis(postID uint64, userID uint64) error {
+    poolKey := GetRedisUserFlaggedKey(postID)
+    setMem := fmt.Sprintf("%d", userID)
+    res, err := db.redis.SIsMember(poolKey, setMem).Result()
+    if res || err != nil {
+        return errors.New("Post has already been flagged.")
+    }
+    _, err = db.redis.SAdd(poolKey, setMem).Result()
+    if err != nil {
+        return err
+    }
 	key := GetRedisPostKey(postID)
-	_, err := db.redis.HIncrBy(key, "flags", 1).Result()
+	_, err = db.redis.HIncrBy(key, "flags", 1).Result()
 	if err != nil {
 		return err
 	}
