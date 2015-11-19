@@ -841,7 +841,7 @@ bc1ba23d88ad53d64ff785588bfd58a9f6f3ee0923ffd9
 `
 
 func AddDummy(db *DBClient) {
-	db.CreateUser("dev", []byte(""), "1@gmail.com")
+	db.CreateUser("dev1", []byte(""), "1@gmail.com")
 	db.CreateUser("dev2", []byte(""), "2@gmail.com")
 	db.CreateUser("dev3", []byte(""), "3@gmail.com")
 	imgData := strings.Replace(dennyImgData, "\n", "", -1)

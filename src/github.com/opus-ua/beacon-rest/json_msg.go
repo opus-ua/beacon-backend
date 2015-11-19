@@ -27,13 +27,14 @@ const (
 
 type SubmitPostMsg struct {
     Id           uint64 `json:"id"`
-    Poster       uint64 `json:"user"`
+    Poster       uint64 `json:"userid"`
     Text         string `json:"text"`
 }
 
 type RespPostMsg struct {
     Hearts      uint32 `json:"hearts"`
     Time        string `json:"time"`
+    Username    string `json:"username"`
 }
 
 type LocationMsg struct {
@@ -124,7 +125,11 @@ func GetPostBeaconImg(w http.ResponseWriter, part *multipart.Part, ip string) ([
     return imgBytes, nil
 }
 
-func ToRespCommentMsg(comment Comment) RespCommentMsg {
+func ToRespCommentMsg(comment Comment, db *DBClient) (RespCommentMsg, error) {
+    username, err := db.GetUsername(comment.PosterID)
+    if err != nil {
+        return RespCommentMsg{}, err
+    }
     return RespCommentMsg{
         SubmitCommentMsg: SubmitCommentMsg{
             Id:     comment.ID,
@@ -134,14 +139,23 @@ func ToRespCommentMsg(comment Comment) RespCommentMsg {
         RespPostMsg: RespPostMsg{
             Hearts: comment.Hearts,
             Time:   comment.Time.Format(time.UnixDate),
+            Username: username,
         },
-    }
+    }, nil
 }
 
-func ToRespBeaconMsg(beacon Beacon) RespBeaconMsg {
+func ToRespBeaconMsg(beacon Beacon, db *DBClient) (RespBeaconMsg, error) {
+    username, err := db.GetUsername(beacon.PosterID)
+    if err != nil {
+        return RespBeaconMsg{}, err
+    }
     comments := []RespCommentMsg{}
     for _, comment := range beacon.Comments {
-        comments = append(comments, ToRespCommentMsg(comment))
+        commentMsg, err := ToRespCommentMsg(comment, db)
+        if err != nil {
+            return RespBeaconMsg{}, err
+        }
+        comments = append(comments, commentMsg)
     }
     return RespBeaconMsg{
         SubmitBeaconMsg: SubmitBeaconMsg{
@@ -158,9 +172,10 @@ func ToRespBeaconMsg(beacon Beacon) RespBeaconMsg {
         RespPostMsg: RespPostMsg{
             Hearts:     beacon.Hearts,
             Time:       beacon.Time.Format(time.UnixDate),
+            Username:   username,
         },
         Comments:   comments,
-    }
+    }, nil
 }
 
 func GetAuthenticationInfo(r *http.Request) (uint64, []byte, error) {
@@ -238,7 +253,11 @@ func HandlePostBeacon(w http.ResponseWriter, r *http.Request, db *DBClient) {
         return
     }
     postedBeacon, err := db.GetThread(id)
-    respBeaconMsg := ToRespBeaconMsg(postedBeacon)
+    respBeaconMsg, err := ToRespBeaconMsg(postedBeacon, db)
+    if err != nil {
+        ErrorJSON(w, "Database error.", 500)
+        return
+    }
     respJson, err := json.Marshal(respBeaconMsg)
     if err != nil {
         ErrorJSON(w, "Could not marshal response JSON.", 500)
@@ -253,7 +272,11 @@ func HandleGetBeacon(w http.ResponseWriter, r *http.Request, id uint64, db *DBCl
         ErrorJSON(w, "Could not retrieve post from db.", 404)
         return
     }
-    respBeaconMsg := ToRespBeaconMsg(beacon)
+    respBeaconMsg, err := ToRespBeaconMsg(beacon, db)
+    if err != nil {
+        ErrorJSON(w, "Database error.", 500)
+        return
+    }
     respJson, err := json.Marshal(respBeaconMsg)
     respBody := &bytes.Buffer{}
     partWriter := multipart.NewWriter(respBody)

@@ -61,7 +61,7 @@ ffc40014100100000000000000000000000000000000ffda000801010001
 
 var jsonData = `
     {
-        "user": 24601,
+        "userid": 1,
         "text": "*high pitched squealing*",
         "longitude": 45.0,
         "latitude": 45.0

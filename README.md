@@ -43,7 +43,8 @@ Content-Type: application/json
 
 {
     "id": 525600,
-    "user": 24601,
+    "userid": 24601,
+    "username": "Jean Valjean",
     "text": "Who am I?",
     "latitude": 45.0,
     "longitude": 45.0,
@@ -78,7 +79,8 @@ Content-Type: multipart/form-data; boundary=793d63336
 Content-Type: application/json
 {
     "id": 1,
-    "user": 24601,
+    "userid": 24601,
+    "username": "Jean Valjean"
     "text": "Who am I?",
     "hearts": 1,
     "latitude": 45.0,
