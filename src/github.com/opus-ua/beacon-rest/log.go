@@ -27,7 +27,7 @@ type ApacheLogRecord struct {
 func (r *ApacheLogRecord) Log() {
     requestLine := fmt.Sprintf("%s %s %s", r.method, r.uri, r.protocol)
     timeInt := r.elapsedTime.Nanoseconds() / int64(time.Millisecond)
-    timeStr := fmt.Sprintf("%dms", strconv.FormatInt(timeInt, 10))
+    timeStr := fmt.Sprintf("%sms", strconv.FormatInt(timeInt, 10))
     if timeInt < 10 {
         timeInt = r.elapsedTime.Nanoseconds() / int64(time.Microsecond)
         timeStr = fmt.Sprintf("%sμs", strconv.FormatInt(timeInt, 10))

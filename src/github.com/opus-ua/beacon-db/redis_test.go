@@ -57,14 +57,14 @@ var p Beacon = Beacon{
 }
 
 func TestAddBeacon(t *testing.T) {
-	_, err := db.AddBeacon(&p)
+	_, err := db.AddBeacon(&p, 1)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
 	key := fmt.Sprintf("p:%d", p.ID)
 	RedisExpect(client.HGet(key, "img"), "abcde", t)
 	RedisExpect(client.HGet(key, "loc"), "\x00\x00\x00\x00\x00\x80F@\x00\x00\x00\x00\x00\x80F@", t)
-	RedisExpect(client.HGet(key, "poster"), "15wx", t)
+	RedisExpect(client.HGet(key, "poster"), "54321", t)
 	RedisExpect(client.HGet(key, "desc"), "Go go Redis!", t)
 	RedisExpect(client.HGet(key, "hearts"), "5", t)
 	RedisExpect(client.HGet(key, "flags"), "1", t)
@@ -89,8 +89,8 @@ var commentB Comment = Comment{
 }
 
 func TestAddComment(t *testing.T) {
-	db.AddComment(&commentA)
-	db.AddComment(&commentB)
+	db.AddComment(&commentA, 2)
+	db.AddComment(&commentB, 3)
 	commentListKey := "p:1:c"
 	res, err := client.LRange(commentListKey, 0, -1).Result()
 	if err != nil {
@@ -101,7 +101,7 @@ func TestAddComment(t *testing.T) {
 		t.Fatalf("Comment list was not correct.")
 	}
 	key := fmt.Sprintf("p:%d", commentA.ID)
-	RedisExpect(client.HGet(key, "poster"), "15wx", t)
+	RedisExpect(client.HGet(key, "poster"), "54321", t)
 	RedisExpect(client.HGet(key, "parent"), "1", t)
 	RedisExpect(client.HGet(key, "text"), "For real. This is stuff.", t)
 	RedisExpect(client.HGet(key, "hearts"), "1", t)
@@ -109,11 +109,11 @@ func TestAddComment(t *testing.T) {
 	RedisExpect(client.HGet(key, "type"), "comment", t)
 	RedisNotNil(client.HGet(key, "time"), t)
 	key = fmt.Sprintf("p:%d", commentB.ID)
-	RedisExpect(client.HGet(key, "poster"), "he", t)
+	RedisExpect(client.HGet(key, "poster"), "626", t)
 	RedisExpect(client.HGet(key, "parent"), "1", t)
 	RedisExpect(client.HGet(key, "text"), "Reed sucks.", t)
 	RedisExpect(client.HGet(key, "hearts"), "0", t)
-	RedisExpect(client.HGet(key, "flags"), "r", t)
+	RedisExpect(client.HGet(key, "flags"), "27", t)
 	RedisExpect(client.HGet(key, "type"), "comment", t)
 	RedisNotNil(client.HGet(key, "time"), t)
 }
@@ -137,7 +137,7 @@ func TestGetBeacon(t *testing.T) {
 func TestHeartPost(t *testing.T) {
 	key := GetRedisPostKey(1)
 	RedisExpect(client.HGet(key, "hearts"), "5", t)
-	err := db.HeartPostRedis(1)
+	err := db.HeartPostRedis(1, 1)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -147,17 +147,36 @@ func TestHeartPost(t *testing.T) {
 func TestFlagPost(t *testing.T) {
 	key := GetRedisPostKey(1)
 	RedisExpect(client.HGet(key, "flags"), "1", t)
-	err := db.FlagPostRedis(1)
+	err := db.FlagPostRedis(1, 1)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
 	RedisExpect(client.HGet(key, "flags"), "2", t)
 }
 
+func TestSetUser(t *testing.T) {
+	if _, err := db.CreateUserRedis("test-user", []byte(""), "anonymous@gmail.com"); err != nil {
+		t.Fatalf(err.Error())
+	}
+	key := "u:1"
+	RedisExpect(client.HGet(key, "username"), "test-user", t)
+	RedisExpect(client.HGet(key, "flags-rec"), "0", t)
+	RedisExpect(client.HGet(key, "flags-sub"), "0", t)
+	RedisExpect(client.HGet(key, "hearts-rec"), "0", t)
+	RedisExpect(client.HGet(key, "hearts-sub"), "0", t)
+	username, err := db.GetUsernameRedis(1)
+	if err != nil {
+		t.Fatalf("Could not get username: %s", err.Error())
+	}
+	if username != "test-user" {
+		t.Fatalf("Retrieved username was '%s', not 'test-user'.", username)
+	}
+}
+
 func BenchmarkAddBeaconRedis(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		p.Description = strconv.Itoa(i)
-		db.AddBeacon(&p)
+		db.AddBeacon(&p, 1)
 	}
 }
 

@@ -61,7 +61,7 @@ ffc40014100100000000000000000000000000000000ffda000801010001
 
 var jsonData = `
     {
-        "user": 24601,
+        "userid": 1,
         "text": "*high pitched squealing*",
         "longitude": 45.0,
         "latitude": 45.0
@@ -87,6 +87,7 @@ func TestPostBeacon(t *testing.T) {
 	partWriter.Close()
 	req, _ := http.NewRequest("POST", "http://localhost:8765/beacon", body)
 	req.Header.Add("Content-Type", partWriter.FormDataContentType())
+	req.SetBasicAuth("1", "0")
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -97,7 +98,7 @@ func TestPostBeacon(t *testing.T) {
 		t.Error(err.Error())
 	}
 	if !strings.Contains(string(respBody), "*high pitched squealing*") {
-		t.Error("Response did not contain correct content.")
+		t.Fatalf("Response did not contain correct content: \n%s", string(respBody))
 	}
 }
 
@@ -112,7 +113,11 @@ func TestGetBeacon(t *testing.T) {
 }
 
 func TestHeartPost(t *testing.T) {
-	resp, err := http.Post("http://localhost:8765/heart/1", "application/json", &bytes.Buffer{})
+	client := &http.Client{}
+	req, _ := http.NewRequest("POST", "http://localhost:8765/heart/1", &bytes.Buffer{})
+	req.Header.Add("Content-Type", "application/json")
+	req.SetBasicAuth("1", "0")
+	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("Could not connect to beacon backend.")
 	}
@@ -122,7 +127,11 @@ func TestHeartPost(t *testing.T) {
 }
 
 func TestFlagPost(t *testing.T) {
-	resp, err := http.Post("http://localhost:8765/flag/1", "application/json", &bytes.Buffer{})
+	client := &http.Client{}
+	req, _ := http.NewRequest("POST", "http://localhost:8765/flag/1", &bytes.Buffer{})
+	req.Header.Add("Content-Type", "application/json")
+	req.SetBasicAuth("1", "0")
+	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("Could not connect to beacon backend.")
 	}

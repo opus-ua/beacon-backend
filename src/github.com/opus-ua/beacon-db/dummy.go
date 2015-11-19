@@ -841,6 +841,9 @@ bc1ba23d88ad53d64ff785588bfd58a9f6f3ee0923ffd9
 `
 
 func AddDummy(db *DBClient) {
+	db.CreateUser("dev1", []byte(""), "1@gmail.com")
+	db.CreateUser("dev2", []byte(""), "2@gmail.com")
+	db.CreateUser("dev3", []byte(""), "3@gmail.com")
 	imgData := strings.Replace(dennyImgData, "\n", "", -1)
 	imgBytes, err := hex.DecodeString(imgData)
 	if err != nil {
@@ -853,71 +856,31 @@ func AddDummy(db *DBClient) {
 			Latitude:  33.219,
 			Longitude: -87.544,
 		},
-		PosterID:    1337,
+		PosterID:    1,
 		Description: "Denny chimes sure is cool, isn't it?",
 		Comments:    []Comment{},
 	}
-	id, err := db.AddBeacon(&beacon)
+	id, err := db.AddBeacon(&beacon, 1337)
 	if err != nil {
 		log.Printf("Could not add dummy to database.")
 		os.Exit(1)
 	}
 	commentA := Comment{
 		BeaconID: id,
-		PosterID: 1789,
+		PosterID: 2,
 		Text:     "You have zero sense of composition, bro.",
 	}
 	commentB := Comment{
 		BeaconID: id,
-		PosterID: 1776,
+		PosterID: 3,
 		Text:     "You have zero social skills, bro.",
 	}
-	commentC := Comment{
-		BeaconID: id,
-		PosterID: 626,
-		Text:     "That was hurtful, man.",
-	}
-	commentD := Comment{
-		BeaconID: id,
-		PosterID: 8771,
-		Text:     "Yeah, why gang up on someone without social skills?",
-	}
-	commentE := Comment{
-		BeaconID: id,
-		PosterID: 117,
-		Text:     "first",
-	}
-	commentF := Comment{
-		BeaconID: id,
-		PosterID: 2112,
-		Text:     "Denny chimes sure is beautiful this time of year. Love -Grandma Jane",
-	}
-	err = db.AddCommentRedis(&commentA)
+	err = db.AddCommentRedis(&commentA, 2)
 	if err != nil {
 		log.Printf("Could not add dummy to database.")
 		os.Exit(1)
 	}
-	err = db.AddCommentRedis(&commentB)
-	if err != nil {
-		log.Printf("Could not add dummy to database.")
-		os.Exit(1)
-	}
-	err = db.AddCommentRedis(&commentC)
-	if err != nil {
-		log.Printf("Could not add dummy to database.")
-		os.Exit(1)
-	}
-	err = db.AddCommentRedis(&commentD)
-	if err != nil {
-		log.Printf("Could not add dummy to database.")
-		os.Exit(1)
-	}
-	err = db.AddCommentRedis(&commentE)
-	if err != nil {
-		log.Printf("Could not add dummy to database.")
-		os.Exit(1)
-	}
-	err = db.AddCommentRedis(&commentF)
+	err = db.AddCommentRedis(&commentB, 3)
 	if err != nil {
 		log.Printf("Could not add dummy to database.")
 		os.Exit(1)

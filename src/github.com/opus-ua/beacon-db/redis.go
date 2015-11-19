@@ -11,8 +11,11 @@ import (
 )
 
 const (
-	REDIS_EXPIRE   = 86400 * time.Second
-	REDIS_INT_BASE = 36
+	REDIS_EXPIRE = 86400 * time.Second
+	// REDIS_EXPIRE   = -1
+	REDIS_INT_BASE    = 10
+	USERNAME_POOL_KEY = "usernames"
+	USER_COUNT_KEY    = "user-count"
 )
 
 func DefaultRedisDB() *redis.Client {
@@ -39,6 +42,22 @@ func GetRedisPostKey(id uint64) string {
 
 func GetRedisCommentListKey(id uint64) string {
 	return fmt.Sprintf("%s:c", GetRedisPostKey(id))
+}
+
+func GetRedisUserKey(id uint64) string {
+	return fmt.Sprintf("u:%d", id)
+}
+
+func GetRedisUserEmailKey(email string) string {
+	return fmt.Sprintf("email:%s", email)
+}
+
+func GetRedisUserHeartedKey(postid uint64) string {
+	return fmt.Sprintf("h:%d", postid)
+}
+
+func GetRedisUserFlaggedKey(postid uint64) string {
+	return fmt.Sprintf("f:%d", postid)
 }
 
 func RedisParseUInt64(res string, err error) (uint64, error) {
@@ -169,7 +188,7 @@ func (db *DBClient) GetThreadRedis(id uint64) (Beacon, error) {
 	return post, nil
 }
 
-func (db *DBClient) AddBeaconRedis(post *Beacon) (uint64, error) {
+func (db *DBClient) AddBeaconRedis(post *Beacon, userID uint64) (uint64, error) {
 	postID, err := db.redis.Incr("post-count").Result()
 	if postID < 0 {
 		return 0, errors.New("Retrieved post count was negative.")
@@ -190,11 +209,11 @@ func (db *DBClient) AddBeaconRedis(post *Beacon) (uint64, error) {
 		"flags", strconv.FormatUint(uint64(post.Flags), REDIS_INT_BASE),
 		"time", now,
 		"type", "beacon")
-	db.redis.Expire(key, REDIS_EXPIRE)
+	// db.redis.Expire(key, REDIS_EXPIRE)
 	return post.ID, nil
 }
 
-func (db *DBClient) AddCommentRedis(comment *Comment) error {
+func (db *DBClient) AddCommentRedis(comment *Comment, userID uint64) error {
 	commentID, err := db.redis.Incr("post-count").Result()
 	if commentID < 0 {
 		return errors.New("Retrieved post count was negative.")
@@ -203,7 +222,7 @@ func (db *DBClient) AddCommentRedis(comment *Comment) error {
 	if err != nil {
 		return err
 	}
-	beaconKey := GetRedisPostKey(comment.BeaconID)
+	// beaconKey := GetRedisPostKey(comment.BeaconID)
 	IDKey := GetRedisCommentListKey(comment.BeaconID)
 	db.redis.RPush(IDKey, strconv.FormatUint(comment.ID, REDIS_INT_BASE))
 	commKey := GetRedisPostKey(comment.ID)
@@ -215,28 +234,170 @@ func (db *DBClient) AddCommentRedis(comment *Comment) error {
 		"flags", strconv.FormatUint(uint64(comment.Flags), REDIS_INT_BASE),
 		"time", now,
 		"type", "comment")
-	db.redis.Expire(beaconKey, REDIS_EXPIRE)
-	db.redis.Expire(IDKey, REDIS_EXPIRE)
-	db.redis.Expire(commKey, REDIS_EXPIRE)
+	// db.redis.Expire(beaconKey, REDIS_EXPIRE)
+	// db.redis.Expire(IDKey, REDIS_EXPIRE)
+	// db.redis.Expire(commKey, REDIS_EXPIRE)
 	return nil
 }
 
-func (db *DBClient) HeartPostRedis(postID uint64) error {
-	key := GetRedisPostKey(postID)
-	_, err := db.redis.HIncrBy(key, "hearts", 1).Result()
+func (db *DBClient) HeartPostRedis(postID uint64, userID uint64) error {
+	poolKey := GetRedisUserHeartedKey(postID)
+	setMem := fmt.Sprintf("%d", userID)
+	res, err := db.redis.SIsMember(poolKey, setMem).Result()
+	if res || err != nil {
+		return errors.New("Post has already been hearted.")
+	}
+	_, err = db.redis.SAdd(poolKey, setMem).Result()
 	if err != nil {
 		return err
 	}
-	db.redis.Expire(key, REDIS_EXPIRE)
+	key := GetRedisPostKey(postID)
+	_, err = db.redis.HIncrBy(key, "hearts", 1).Result()
+	if err != nil {
+		return err
+	}
+	// db.redis.Expire(key, REDIS_EXPIRE)
 	return nil
 }
 
-func (db *DBClient) FlagPostRedis(postID uint64) error {
-	key := GetRedisPostKey(postID)
-	_, err := db.redis.HIncrBy(key, "flags", 1).Result()
+func (db *DBClient) UnheartPostRedis(postID uint64, userID uint64) error {
+	poolKey := GetRedisUserHeartedKey(postID)
+	setMem := fmt.Sprintf("%d", userID)
+	res, err := db.redis.SIsMember(poolKey, setMem).Result()
+	if !res || err != nil {
+		return errors.New("Post has not been hearted by user.")
+	}
+	_, err = db.redis.SRem(poolKey, setMem).Result()
 	if err != nil {
 		return err
 	}
-	db.redis.Expire(key, REDIS_EXPIRE)
+	key := GetRedisPostKey(postID)
+	_, err = db.redis.HIncrBy(key, "hearts", -1).Result()
+	if err != nil {
+		return err
+	}
+	// db.redis.Expire(key, REDIS_EXPIRE)
 	return nil
+
+}
+
+func (db *DBClient) FlagPostRedis(postID uint64, userID uint64) error {
+	poolKey := GetRedisUserFlaggedKey(postID)
+	setMem := fmt.Sprintf("%d", userID)
+	res, err := db.redis.SIsMember(poolKey, setMem).Result()
+	if res || err != nil {
+		return errors.New("Post has already been flagged.")
+	}
+	_, err = db.redis.SAdd(poolKey, setMem).Result()
+	if err != nil {
+		return err
+	}
+	key := GetRedisPostKey(postID)
+	_, err = db.redis.HIncrBy(key, "flags", 1).Result()
+	if err != nil {
+		return err
+	}
+	// db.redis.Expire(key, REDIS_EXPIRE)
+	return nil
+}
+
+func (db *DBClient) CreateUserRedis(username string, authkey []byte, email string) (uint64, error) {
+	if res, err := db.redis.SIsMember(USERNAME_POOL_KEY, username).Result(); res || err != nil {
+		return 0, errors.New("Username already exists.")
+	}
+	return db.AddUserRedis(username, authkey, email)
+}
+
+func (db *DBClient) AddUserRedis(username string, authkey []byte, email string) (uint64, error) {
+	userIDSigned, err := db.redis.Incr(USER_COUNT_KEY).Result()
+	userID := uint64(userIDSigned)
+	if err != nil {
+		return 0, errors.New("Could not get number of users in db.")
+	}
+	if db.SetUserRedis(userID, username, authkey, email) != nil {
+		return 0, errors.New("Could not add user to db.")
+	}
+	if db.redis.SAdd(USERNAME_POOL_KEY, username).Err() != nil {
+		return 0, errors.New("Could not reserve username.")
+	}
+	if db.redis.Set(GetRedisUserEmailKey(email), userID, 0).Err() != nil {
+		return 0, errors.New("Could not add email to pool.")
+	}
+	return userID, nil
+}
+
+func (db *DBClient) SetUserRedis(userID uint64, username string, authkey []byte, email string) error {
+	userKey := GetRedisUserKey(userID)
+	now := time.Now().Format(time.UnixDate)
+	res := db.redis.HMSet(userKey, "id", strconv.FormatUint(userID, REDIS_INT_BASE),
+		"username", username,
+		"created", now,
+		"flags-rec", "0",
+		"flags-sub", "0",
+		"hearts-rec", "0",
+		"hearts-sub", "0",
+		"auth", string(authkey),
+		"email", email)
+	if res.Err() != nil {
+		return res.Err()
+	}
+	return nil
+}
+
+func (db *DBClient) UserExistsRedis(userid uint64) (bool, error) {
+	res, err := db.redis.Exists(GetRedisUserKey(userid)).Result()
+	if err != nil {
+		return false, err
+	}
+	return res, nil
+}
+
+func (db *DBClient) UsernameExistsRedis(username string) (bool, error) {
+	res, err := db.redis.SIsMember(USERNAME_POOL_KEY, username).Result()
+	if err != nil {
+		return false, err
+	}
+	return res, nil
+}
+
+func (db *DBClient) EmailExistsRedis(email string) (bool, error) {
+	res, err := db.redis.Exists(GetRedisUserEmailKey(email)).Result()
+	if err != nil {
+		return false, err
+	}
+	return res, nil
+}
+
+func (db *DBClient) GetUserIDByEmailRedis(email string) (uint64, error) {
+	res, err := db.redis.Get(GetRedisUserEmailKey(email)).Result()
+	if err != nil {
+		return 0, err
+	}
+	id, err := RedisParseUInt64(res, nil)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
+func (db *DBClient) UserAuthenticatedRedis(userid uint64, authkey []byte) (bool, error) {
+	storedKey, err := db.redis.HGet(GetRedisUserKey(userid), "auth").Result()
+	if err != nil {
+		return false, err
+	}
+	return storedKey == string(authkey), nil
+}
+
+func (db *DBClient) GetUsernameRedis(userid uint64) (string, error) {
+	return db.redis.HGet(GetRedisUserKey(userid), "username").Result()
+}
+
+func (db *DBClient) SetUserAuthKeyRedis(userid uint64, authkey []byte) error {
+	return db.redis.HSet(GetRedisUserKey(userid), "auth", string(authkey)).Err()
+}
+
+func (db *DBClient) HasHeartedRedis(postid uint64, userid uint64) (bool, error) {
+	postKey := GetRedisUserHeartedKey(postid)
+	userElem := fmt.Sprintf("%d", userid)
+	return db.redis.SIsMember(postKey, userElem).Result()
 }

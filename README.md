@@ -2,6 +2,18 @@ Please bear in mind that this document is under heavy
 construction and is likely to change often and greatly.
 The beacon backend provides the following endpoints.
 
+## Configuration
+
+The beacon backend requires an ID from Google in order to
+integrate with Google sign-in. There are more detailed
+instructions in the frontend's README on how to get such an
+ID from Google. This ID should end in 
+```apps.googleusercontent.com```. Take this ID and make it
+the sole content of a new file ```google.id``` at the root
+directory of the backend (no spaces or newlines). During the
+build process, this ID will be incorporated into the binary
+and used to verify new accounts.
+
 ## Posting a Beacon
 
 Use the following REST request to post a beacon.
@@ -31,7 +43,8 @@ Content-Type: application/json
 
 {
     "id": 525600,
-    "user": 24601,
+    "userid": 24601,
+    "username": "Jean Valjean",
     "text": "Who am I?",
     "latitude": 45.0,
     "longitude": 45.0,
@@ -58,6 +71,10 @@ GET /beacon/1 HTTP/1.1
 The 1 above may be replaced by the id of any beacon.
 You will receive the following response.
 
+Note that if you supply BasicAuth, the backend will
+report which posts you've hearted. Otherwise, all
+```hearted``` fields will be false.
+
 ```http
 HTTP/1.1 200 OK
 Content-Type: multipart/form-data; boundary=793d63336
@@ -66,26 +83,30 @@ Content-Type: multipart/form-data; boundary=793d63336
 Content-Type: application/json
 {
     "id": 1,
-    "user": 24601,
+    "userid": 24601,
+    "username": "Jean Valjean"
     "text": "Who am I?",
     "hearts": 1,
     "latitude": 45.0,
     "longitude": 45.0,
     "time": "Sat Nov. 7 21:13:22 CST 2015",
+    "hearted": true,
     "comments": [
         {
             "id": 2,
             "user": 54321,
             "text": "This post is bad and you should feel bad.",
             "hearts": 7,
-            "time": "Sat Nov. 7 21:13:33 CST 2015"
+            "time": "Sat Nov. 7 21:13:33 CST 2015",
+            "hearted": false,
         },
         {
             "id": 3,
             "user": 12345,
             "text": "No, people. Let's be smart and bring it off.",
             "hearts": 5,
-            "time": "Sat Nov. 7 21:13:57 CST 2015"
+            "time": "Sat Nov. 7 21:13:57 CST 2015",
+            "hearted": false,
         }
     ]
 }
@@ -125,6 +146,40 @@ In response, you will receive a 200 OK if nothing has gone wrong.
 
 ```http
 HTTP/1.1 200 OK
+```
+
+## Creating an account
+
+Send a POST to /createaccount in order to create a new account.
+Note that this is the only POST endpoint that does not require
+BasicAuth.
+
+```http
+POST /createaccount
+Content-Type: application/json
+
+{
+    "username": "dexter",
+    "token": "....apps.googleusercontent.com",
+}
+```
+
+You will receive a ``200 OK`` if the request is successful.
+The request will fail if the username is taken or if the Google
+account has already been used to open a Beacon account.
+
+Along with the ```200 OK```, you will receive your user ID
+and the secret. This pair will be used with http BasicAuth
+for all future posts.
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+    "id": 24601,
+    "secret": "3SECRET5U"
+}
 ```
 
 ## General Errors

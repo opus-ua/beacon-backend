@@ -14,9 +14,12 @@ import (
     "time"
     "io"
     "bytes"
+    "strconv"
+    "crypto/rand"
     . "github.com/opus-ua/beacon-post"
     . "github.com/opus-ua/beacon-db"
 )
+
 
 const (
     MAX_IMG_BYTES = 1 << 22
@@ -24,13 +27,15 @@ const (
 
 type SubmitPostMsg struct {
     Id           uint64 `json:"id"`
-    Poster       uint64 `json:"user"`
+    Poster       uint64 `json:"userid"`
     Text         string `json:"text"`
 }
 
 type RespPostMsg struct {
     Hearts      uint32 `json:"hearts"`
     Time        string `json:"time"`
+    Username    string `json:"username"`
+    Hearted     bool   `json:"hearted"`
 }
 
 type LocationMsg struct {
@@ -54,6 +59,28 @@ type RespBeaconMsg struct {
     SubmitBeaconMsg
     RespPostMsg
     Comments    []RespCommentMsg `json:"comments"`
+}
+
+type CreateAccountReqMsg struct {
+    Username string `json:"username"`
+    Token   string `json:"token"`
+}
+
+type CreateAccountRespMsg struct {
+    ID uint64 `json:"id"`
+    Secret string `json:"secret"`
+}
+
+type GoogleAuthRespMsg struct {
+    Iss string `json:"iss"`
+    Sub string `json:"sub"`
+    Azp string `json:"azp"`
+    Email string `json:"email"`
+    AtHash string `json:"at_hash"`
+    EmailVerified string `json:"email_verified"`
+    Aud string `json:"aud"`
+    Iat string `json:"iat"`
+    Exp string `json:"exp"`
 }
 
 type JSONError struct {
@@ -96,9 +123,24 @@ func GetPostBeaconImg(w http.ResponseWriter, part *multipart.Part, ip string) ([
         ErrorJSON(w, "Unable to read submitted image.", 500)
         return []byte{}, errors.New(msg)
     }
-    return imgBytes, nil }
+    return imgBytes, nil
+}
 
-func ToRespCommentMsg(comment Comment) RespCommentMsg {
+func ToRespCommentMsg(comment Comment, viewerID int64, db *DBClient) (RespCommentMsg, error) {
+    username, err := db.GetUsername(comment.PosterID)
+    if err != nil {
+        return RespCommentMsg{}, err
+    }
+    var hearted bool
+    if viewerID >= 0 {
+        hearted, err = db.HasHearted(comment.ID, uint64(viewerID))
+        if err != nil {
+            return RespCommentMsg{}, err
+        }
+    } else {
+        hearted = false
+    }
+    log.Printf("Comment hearted: %t", hearted)
     return RespCommentMsg{
         SubmitCommentMsg: SubmitCommentMsg{
             Id:     comment.ID,
@@ -108,14 +150,34 @@ func ToRespCommentMsg(comment Comment) RespCommentMsg {
         RespPostMsg: RespPostMsg{
             Hearts: comment.Hearts,
             Time:   comment.Time.Format(time.UnixDate),
+            Username: username,
+            Hearted: hearted,
         },
-    }
+    }, nil
 }
 
-func ToRespBeaconMsg(beacon Beacon) RespBeaconMsg {
+func ToRespBeaconMsg(beacon Beacon, viewerID int64, db *DBClient) (RespBeaconMsg, error) {
+    username, err := db.GetUsername(beacon.PosterID)
+    if err != nil {
+        return RespBeaconMsg{}, err
+    }
+    var hearted bool
+    if viewerID >= 0 {
+        hearted, err = db.HasHearted(beacon.ID, uint64(viewerID))
+        if err != nil {
+            return RespBeaconMsg{}, err
+        }
+    } else {
+        hearted = false
+    }
+    log.Printf("Beacon hearted: %t", hearted)
     comments := []RespCommentMsg{}
     for _, comment := range beacon.Comments {
-        comments = append(comments, ToRespCommentMsg(comment))
+        commentMsg, err := ToRespCommentMsg(comment, viewerID, db)
+        if err != nil {
+            return RespBeaconMsg{}, err
+        }
+        comments = append(comments, commentMsg)
     }
     return RespBeaconMsg{
         SubmitBeaconMsg: SubmitBeaconMsg{
@@ -132,13 +194,46 @@ func ToRespBeaconMsg(beacon Beacon) RespBeaconMsg {
         RespPostMsg: RespPostMsg{
             Hearts:     beacon.Hearts,
             Time:       beacon.Time.Format(time.UnixDate),
+            Username:   username,
+            Hearted:    hearted,
         },
         Comments:   comments,
+    }, nil
+}
+
+func GetAuthenticationInfo(r *http.Request) (uint64, []byte, error) {
+    userIDStr, authKeyStr, ok := r.BasicAuth()
+    if !ok {
+        return 0, []byte{}, errors.New("Could not parse BasicAuth.")
     }
+    userIDSigned, err := strconv.ParseInt(userIDStr, 10, 64)
+    if err != nil {
+        return 0, []byte{}, errors.New("Could not parse user ID as integer.")
+    }
+    userID := uint64(userIDSigned)
+    authKey := []byte(authKeyStr)
+    return userID, authKey, nil
+}
+
+func Authenticate(r *http.Request, db *DBClient) (uint64, error) {
+    userID, authKey, err := GetAuthenticationInfo(r)
+    if err != nil {
+        return 0, err
+    }
+    if authed, err := db.UserAuthenticated(userID, authKey); !authed || err != nil {
+        return 0, errors.New("Could not authenticate user.")
+    }
+    return userID, nil
 }
 
 func HandlePostBeacon(w http.ResponseWriter, r *http.Request, db *DBClient) {
     ip := r.RemoteAddr
+    userID, err := Authenticate(r, db)
+    if err != nil {
+        log.Printf(err.Error())
+        ErrorJSON(w, err.Error(), 400)
+        return
+    }
     mediaType, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
     if err != nil {
         log.Printf(err.Error())
@@ -175,13 +270,17 @@ func HandlePostBeacon(w http.ResponseWriter, r *http.Request, db *DBClient) {
         return
     }
     post.Image = img
-    id, err := db.AddBeacon(&post)
+    id, err := db.AddBeacon(&post, userID)
     if err != nil {
         ErrorJSON(w, "Database error.", 500)
         return
     }
     postedBeacon, err := db.GetThread(id)
-    respBeaconMsg := ToRespBeaconMsg(postedBeacon)
+    respBeaconMsg, err := ToRespBeaconMsg(postedBeacon, int64(userID), db)
+    if err != nil {
+        ErrorJSON(w, "Database error.", 500)
+        return
+    }
     respJson, err := json.Marshal(respBeaconMsg)
     if err != nil {
         ErrorJSON(w, "Could not marshal response JSON.", 500)
@@ -191,12 +290,22 @@ func HandlePostBeacon(w http.ResponseWriter, r *http.Request, db *DBClient) {
 }
 
 func HandleGetBeacon(w http.ResponseWriter, r *http.Request, id uint64, db *DBClient) {
+    var viewerID int64
+    viewerIDu, err := Authenticate(r, db)
+    viewerID = int64(viewerIDu)
+    if err != nil {
+        viewerID = -1
+    }
     beacon, err := db.GetThread(id)
     if err != nil {
         ErrorJSON(w, "Could not retrieve post from db.", 404)
         return
     }
-    respBeaconMsg := ToRespBeaconMsg(beacon)
+    respBeaconMsg, err := ToRespBeaconMsg(beacon, viewerID, db)
+    if err != nil {
+        ErrorJSON(w, "Database error.", 500)
+        return
+    }
     respJson, err := json.Marshal(respBeaconMsg)
     respBody := &bytes.Buffer{}
     partWriter := multipart.NewWriter(respBody)
@@ -222,19 +331,142 @@ func HandleGetBeacon(w http.ResponseWriter, r *http.Request, id uint64, db *DBCl
 }
 
 func HandleHeartPost(w http.ResponseWriter, r *http.Request, id uint64, db *DBClient) {
-    err := db.HeartPost(id)
+    userID, err := Authenticate(r, db)
+    if err != nil {
+        log.Printf(err.Error())
+        ErrorJSON(w, err.Error(), 400)
+        return
+    }
+    err = db.HeartPost(id, userID)
     if err != nil {
         log.Printf(err.Error())
         ErrorJSON(w, "Could not heart post.", 500)
+        return;
+    }
+    w.WriteHeader(200)
+}
+
+func HandleUnheartPost(w http.ResponseWriter, r *http.Request, id uint64, db *DBClient) {
+    userID, err := Authenticate(r, db)
+    if err != nil {
+        log.Printf(err.Error())
+        ErrorJSON(w, err.Error(), 400)
+        return
+    }
+    err = db.UnheartPost(id, userID)
+    if err != nil {
+        log.Printf(err.Error())
+        ErrorJSON(w, "Could not unheart post.", 500)
+        return;
     }
     w.WriteHeader(200)
 }
 
 func HandleFlagPost(w http.ResponseWriter, r *http.Request, id uint64, db *DBClient) {
-    err := db.FlagPost(id)
+    userID, err := Authenticate(r, db)
+    if err != nil {
+        log.Printf(err.Error())
+        ErrorJSON(w, err.Error(), 400)
+        return
+    }
+    err = db.FlagPost(id, userID)
     if err != nil {
         log.Printf(err.Error())
         ErrorJSON(w, "Could not flag post.", 500)
+        return;
     }
     w.WriteHeader(200)
+}
+
+func GenerateSecret() (string, error) {
+    const secretLen = 50
+    const characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" 
+    buf := make([]byte, secretLen)
+    _, err := rand.Read(buf)
+    if err != nil {
+        return "", err
+    }
+    for i := 0; i < secretLen; i++ {
+       buf[i] = characters[int(buf[i]) % len(characters)] 
+    }
+    return string(buf), nil
+}
+
+func HandleCreateAccount(w http.ResponseWriter, r *http.Request, googleID string, db *DBClient) {
+    log.Printf("Google ID: %s", googleID)
+    decoder := json.NewDecoder(r.Body)
+    var accountReq CreateAccountReqMsg
+    decoder.Decode(&accountReq)
+    url := "https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=" + accountReq.Token
+    res, err := http.Get(url)
+    if err != nil {
+        log.Printf(err.Error())
+        ErrorJSON(w, "Failed to authenticate Google account.", 500)
+        return
+    }
+    if res.StatusCode != 200 {
+        log.Printf("Account authentication failure.")
+        ErrorJSON(w, "Failed to authenticate Google account.", 500)
+        return
+    }
+    body, err := ioutil.ReadAll(res.Body)
+    if err != nil {
+        log.Printf("Account authentication failure.")
+        ErrorJSON(w, "Failed to authenticate Google account.", 500)
+        return
+    }
+    var googleAuth GoogleAuthRespMsg
+    err = json.Unmarshal(body, &googleAuth)
+    if err != nil {
+        log.Printf("Account authentication failure. (json unmarshal)")
+        ErrorJSON(w, "Failed to authenticate Google account.", 500)
+        return
+    }
+    if googleAuth.Aud != googleID {
+        log.Printf("App ID does not match beacon's.")
+        log.Printf("Our ID: %s", googleID)
+        log.Printf("Received ID: %s", googleAuth.Aud)
+        ErrorJSON(w, "Failed to authenticate Google account", 400)
+        return
+    }
+    secret, err := GenerateSecret()
+    if err != nil {
+        log.Printf("Failed to generate secret.")
+    }
+    log.Printf("Successfully authenticated.")
+    var id uint64
+    if exists, err := db.EmailExists(googleAuth.Email); exists || err != nil {
+        id, err = db.GetUserIDByEmail(googleAuth.Email)
+        if err != nil {
+            log.Printf("Could not find user by email.")
+            ErrorJSON(w, "Failed to locate user by email.", 500)
+            return
+        }
+        err = db.SetUserAuthKey(id, []byte(secret))
+        if err != nil {
+            log.Printf("Could not set user authorization.")
+            ErrorJSON(w, "Failed to set user authorization.", 500)
+            return
+        }
+    } else {
+        if exists, err := db.UsernameExists(accountReq.Username); exists || err != nil {
+            log.Printf("Username '%s' already exists.", accountReq.Username)
+            ErrorJSON(w, "Username already exists.", 400)
+            return
+        }
+        id, err = db.CreateUser(accountReq.Username, []byte(secret), googleAuth.Email)
+        if err != nil {
+            log.Printf("Could not create new user.")
+            ErrorJSON(w, "Failed to create new user.", 500)
+            return
+        }
+    }
+    respMsg := CreateAccountRespMsg{ID: id, Secret: secret}
+    respJson, err := json.Marshal(respMsg)
+    if err != nil {
+        log.Printf("Could not marshal JSON response.")
+        ErrorJSON(w, "Failed to marshal response JSON.", 500)
+        return
+    }
+    io.WriteString(w, string(respJson))
 }
