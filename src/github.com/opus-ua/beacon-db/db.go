@@ -44,6 +44,7 @@ func TestDB() *DBClient {
 		devMode: true,
 	}
     db.TestingTable()
+    db.Flush()
 	AddDummy(db)
 	return db
 }

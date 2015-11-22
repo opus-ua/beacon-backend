@@ -59,7 +59,3 @@ type GoogleAuthRespMsg struct {
     Iat string `json:"iat"`
     Exp string `json:"exp"`
 }
-
-type JSONError struct {
-	Text string `json:"error"`
-}

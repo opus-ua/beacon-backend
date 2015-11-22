@@ -55,7 +55,7 @@ func (bm *BeaconServer) HandleMethod(uri string, method string, handler BeaconHa
     bm.mux.HandleFunc(uri, func(w http.ResponseWriter, r *http.Request) {
         if r.Method != method {
             msg := fmt.Sprintf("Only method %s supported.", method)
-            ErrorJSON(w, msg, 400)
+            WriteErrorResp(w, msg, ProtocolError)
             return
         }
         handler(w, r, bm.db)
@@ -74,13 +74,13 @@ func (bm *BeaconServer) HandleIntParam(uri string, method string, handler IntPar
     bm.HandleMethod(uri, method, func(w http.ResponseWriter, r *http.Request, db *DBClient) {
         splitURI := strings.Split(r.RequestURI, "/")
         if len(splitURI) < 3 {
-            ErrorJSON(w, "Could not parse URI parameter.", 400)
+            WriteErrorResp(w, "Could not parse uri parameter.", ProtocolError)
             return
         }
         intStr := splitURI[2]
         intSigned, err := strconv.ParseInt(intStr, 10, 64)
         if err != nil {
-            ErrorJSON(w, "Could not parse URI parameter.", 400)
+            WriteErrorResp(w, "Could not parse uri parameter.", ProtocolError)
             return
         }
         handler(w, r, uint64(intSigned), db)
@@ -103,7 +103,7 @@ func (bm *BeaconServer) HandleVersion(uri string) {
     bm.HandleGet(uri, func(w http.ResponseWriter, r *http.Request, db *DBClient) {
         versionJSON, err := json.Marshal(bm.version)
         if err != nil {
-            ErrorJSON(w, "Could not retrieve version number.", http.StatusInternalServerError)
+            WriteErrorResp(w, "Could not retrieve version number.", ServerError)
             return
         }
         io.WriteString(w, string(versionJSON))
