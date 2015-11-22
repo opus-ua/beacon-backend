@@ -356,7 +356,13 @@ func HandleCreateAccount(w http.ResponseWriter, r *http.Request, googleID []stri
         ErrorJSON(w, "Failed to authenticate Google account.", 500)
         return
     }
-    if googleAuth.Aud != googleID[0] {
+    inKeys := false
+    for _, key := range googleID {
+        if key == googleAuth.Aud {
+            inKeys = true
+        }
+    }
+    if !inKeys {
         ErrorJSON(w, "Failed to authenticate Google account", 400)
         return
     }

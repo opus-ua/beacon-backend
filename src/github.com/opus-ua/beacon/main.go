@@ -11,7 +11,8 @@ import (
 )
 
 var version string = "0.0.0"
-var googleID string = ""
+var releaseGoogleID string = ""
+var debugGoogleID string = ""
 var DEFAULT_PORT uint = 8765
 
 var (
@@ -38,7 +39,7 @@ func StartServer(dev bool) {
         Hash: gitHash,
         DevMode: devMode,
     }
-    server := NewBeaconServer(dev, versionInfo, []string{googleID})
+    server := NewBeaconServer(dev, versionInfo, []string{releaseGoogleID, debugGoogleID})
 	err := server.Start(port)
 	if err != nil {
 		if port == DEFAULT_PORT {
