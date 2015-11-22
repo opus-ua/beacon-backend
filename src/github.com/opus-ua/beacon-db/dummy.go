@@ -841,50 +841,50 @@ bc1ba23d88ad53d64ff785588bfd58a9f6f3ee0923ffd9
 `
 
 func AddDummy(db *DBClient) {
-    if _, err := db.GetThread(1); err != nil {
-        db.CreateUser("dev1", []byte(""), "1@gmail.com")
-        db.CreateUser("dev2", []byte(""), "2@gmail.com")
-        db.CreateUser("dev3", []byte(""), "3@gmail.com")
-        imgData := strings.Replace(dennyImgData, "\n", "", -1)
-        imgBytes, err := hex.DecodeString(imgData)
-        if err != nil {
-            log.Printf("Could not decode dummy image.")
-            os.Exit(1)
-        }
-        beacon := Beacon{
-            Image: imgBytes,
-            Location: Geotag{
-                Latitude:  33.219,
-                Longitude: -87.544,
-            },
-            PosterID:    1,
-            Description: "Denny chimes sure is cool, isn't it?",
-            Comments:    []Comment{},
-        }
-        id, err := db.AddBeacon(&beacon, 1337)
-        if err != nil {
-            log.Printf("Could not add dummy to database.")
-            os.Exit(1)
-        }
-        commentA := Comment{
-            BeaconID: id,
-            PosterID: 2,
-            Text:     "You have zero sense of composition, bro.",
-        }
-        commentB := Comment{
-            BeaconID: id,
-            PosterID: 3,
-            Text:     "You have zero social skills, bro.",
-        }
-        err = db.AddCommentRedis(&commentA, 2)
-        if err != nil {
-            log.Printf("Could not add dummy to database.")
-            os.Exit(1)
-        }
-        err = db.AddCommentRedis(&commentB, 3)
-        if err != nil {
-            log.Printf("Could not add dummy to database.")
-            os.Exit(1)
-        }
-    }
+	if _, err := db.GetThread(1); err != nil {
+		db.CreateUser("dev1", []byte(""), "1@gmail.com")
+		db.CreateUser("dev2", []byte(""), "2@gmail.com")
+		db.CreateUser("dev3", []byte(""), "3@gmail.com")
+		imgData := strings.Replace(dennyImgData, "\n", "", -1)
+		imgBytes, err := hex.DecodeString(imgData)
+		if err != nil {
+			log.Printf("Could not decode dummy image.")
+			os.Exit(1)
+		}
+		beacon := Beacon{
+			Image: imgBytes,
+			Location: Geotag{
+				Latitude:  33.219,
+				Longitude: -87.544,
+			},
+			PosterID:    1,
+			Description: "Denny chimes sure is cool, isn't it?",
+			Comments:    []Comment{},
+		}
+		id, err := db.AddBeacon(&beacon, 1337)
+		if err != nil {
+			log.Printf("Could not add dummy to database.")
+			os.Exit(1)
+		}
+		commentA := Comment{
+			BeaconID: id,
+			PosterID: 2,
+			Text:     "You have zero sense of composition, bro.",
+		}
+		commentB := Comment{
+			BeaconID: id,
+			PosterID: 3,
+			Text:     "You have zero social skills, bro.",
+		}
+		err = db.AddCommentRedis(&commentA, 2)
+		if err != nil {
+			log.Printf("Could not add dummy to database.")
+			os.Exit(1)
+		}
+		err = db.AddCommentRedis(&commentB, 3)
+		if err != nil {
+			log.Printf("Could not add dummy to database.")
+			os.Exit(1)
+		}
+	}
 }

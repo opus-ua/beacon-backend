@@ -402,9 +402,9 @@ func (db *DBClient) HasHeartedRedis(postid uint64, userid uint64) (bool, error) 
 }
 
 func (db *DBClient) FlushRedis() error {
-    return db.redis.FlushDb().Err()
+	return db.redis.FlushDb().Err()
 }
 
 func (db *DBClient) TestingTableRedis() error {
-    return db.redis.Select(11).Err()
+	return db.redis.Select(11).Err()
 }

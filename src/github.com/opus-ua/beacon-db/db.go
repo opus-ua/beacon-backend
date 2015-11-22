@@ -13,13 +13,13 @@ type DBClient struct {
 }
 
 func NewDB(dev bool, testing bool) *DBClient {
-    if testing {
-        return TestDB()
-    }
-    if dev {
-        return DevDB()
-    }
-    return DefaultDB()
+	if testing {
+		return TestDB()
+	}
+	if dev {
+		return DevDB()
+	}
+	return DefaultDB()
 }
 
 func DefaultDB() *DBClient {
@@ -43,8 +43,8 @@ func TestDB() *DBClient {
 		redis:   DevRedisDB(),
 		devMode: true,
 	}
-    db.TestingTable()
-    db.Flush()
+	db.TestingTable()
+	db.Flush()
 	AddDummy(db)
 	return db
 }
@@ -92,10 +92,10 @@ func (db *DBClient) UserExists(userid uint64) (bool, error) {
 
 func (db *DBClient) UserAuthenticated(userid uint64, authkey []byte) (bool, error) {
 	exists, err := db.UserExists(userid)
-    if err != nil {
-        return false, err
-    }
-    if !exists {
+	if err != nil {
+		return false, err
+	}
+	if !exists {
 		return false, nil
 	}
 	if db.devMode {
@@ -129,9 +129,9 @@ func (db *DBClient) HasHearted(postid uint64, userid uint64) (bool, error) {
 }
 
 func (db *DBClient) Flush() error {
-    return db.FlushRedis()
+	return db.FlushRedis()
 }
 
 func (db *DBClient) TestingTable() error {
-    return db.TestingTableRedis()
+	return db.TestingTableRedis()
 }

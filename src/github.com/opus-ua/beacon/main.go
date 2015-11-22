@@ -3,11 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	. "github.com/opus-ua/beacon-rest"
+	"io"
 	"log"
 	"os"
 	"runtime"
-    "io"
-	. "github.com/opus-ua/beacon-rest"
 )
 
 var version string = "0.0.0"
@@ -34,12 +34,12 @@ func StartServer(dev bool, testing bool) {
 	log.Printf("Listening on port %d.\n", port)
 	cores := runtime.NumCPU()
 	log.Printf("Core Count: %d", cores)
-    versionInfo := VersionInfo{
-        Number: version,
-        Hash: gitHash,
-        DevMode: devMode,
-    }
-    server := NewBeaconServer(dev, testing, versionInfo, []string{releaseGoogleID, debugGoogleID})
+	versionInfo := VersionInfo{
+		Number:  version,
+		Hash:    gitHash,
+		DevMode: devMode,
+	}
+	server := NewBeaconServer(dev, testing, versionInfo, []string{releaseGoogleID, debugGoogleID})
 	err := server.Start(port)
 	if err != nil {
 		if port == DEFAULT_PORT {
