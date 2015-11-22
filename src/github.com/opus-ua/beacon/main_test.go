@@ -15,7 +15,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	go StartServer(true)
+	go StartServer(true, true)
 	time.Sleep(50 * time.Millisecond)
 	res := m.Run()
 	os.Exit(res)

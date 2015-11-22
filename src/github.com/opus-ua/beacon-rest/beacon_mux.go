@@ -17,9 +17,9 @@ type BeaconServer struct {
     version VersionInfo
 }
 
-func NewBeaconServer(dev bool, version VersionInfo, auth []string) *BeaconServer {
+func NewBeaconServer(dev bool, testing bool, version VersionInfo, auth []string) *BeaconServer {
     bs := &BeaconServer{
-        db: NewDB(dev),
+        db: NewDB(dev, testing),
         mux: http.DefaultServeMux,
         authCodes: auth,
         version: version,
@@ -45,6 +45,10 @@ func (bm *BeaconServer) Start(port uint) error {
         Handler: loggingHandler,
     }
     return server.ListenAndServe()
+}
+
+func (bm *BeaconServer) TestingMode() error {
+    return bm.db.TestingTable()
 }
 
 func (bm *BeaconServer) HandleMethod(uri string, method string, handler BeaconHandler) {

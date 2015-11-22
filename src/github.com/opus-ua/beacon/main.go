@@ -30,7 +30,7 @@ func init() {
 	flag.Parse()
 }
 
-func StartServer(dev bool) {
+func StartServer(dev bool, testing bool) {
 	log.Printf("Listening on port %d.\n", port)
 	cores := runtime.NumCPU()
 	log.Printf("Core Count: %d", cores)
@@ -39,7 +39,7 @@ func StartServer(dev bool) {
         Hash: gitHash,
         DevMode: devMode,
     }
-    server := NewBeaconServer(dev, versionInfo, []string{releaseGoogleID, debugGoogleID})
+    server := NewBeaconServer(dev, testing, versionInfo, []string{releaseGoogleID, debugGoogleID})
 	err := server.Start(port)
 	if err != nil {
 		if port == DEFAULT_PORT {
@@ -65,6 +65,6 @@ func main() {
 	if showVersion {
 		PrintVersion()
 	} else {
-		StartServer(devMode)
+		StartServer(devMode, false)
 	}
 }

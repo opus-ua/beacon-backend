@@ -30,9 +30,8 @@ func DevRedisDB() *redis.Client {
 	client := redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
 		Password: "",
-		DB:       11,
+		DB:       0,
 	})
-	client.FlushDb()
 	return client
 }
 
@@ -400,4 +399,12 @@ func (db *DBClient) HasHeartedRedis(postid uint64, userid uint64) (bool, error) 
 	postKey := GetRedisUserHeartedKey(postid)
 	userElem := fmt.Sprintf("%d", userid)
 	return db.redis.SIsMember(postKey, userElem).Result()
+}
+
+func (db *DBClient) FlushRedis() error {
+    return db.redis.FlushDb().Err()
+}
+
+func (db *DBClient) TestingTableRedis() error {
+    return db.redis.Select(11).Err()
 }
