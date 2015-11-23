@@ -15,7 +15,7 @@ type JSONError struct {
 }
 
 func (e JSONError) Error() string {
-    return fmt.Sprintf("Error %d: \"%s\"", e.Code, e.Msg)
+    return fmt.Sprintf("%s \"%s\"", errorCodes[e.Code].HttpMsg, e.Msg)
 }
 
 type ErrResp struct {
@@ -24,13 +24,13 @@ type ErrResp struct {
 }
 
 const (
-    DatabaseError = 30
     ProtocolError = 31
-    ServerError = 32
-    ExternalServiceError = 33
-    JsonError = 34
-    NoAccountFound = 40
-    UsernameExists = 41
+    JsonError = 32
+    DatabaseError = 40
+    ServerError = 41
+    ExternalServiceError = 42
+    NoAccountFound = 50
+    UsernameExists = 51
     UnspecifiedError = 99
 )
 
@@ -38,13 +38,13 @@ var errorCodes map[int]ErrResp
 
 func init() {
     errorCodes = map[int]ErrResp{
-        30: ErrResp{HttpCode: 500, HttpMsg: "Database error."},
-        31: ErrResp{HttpCode: 500, HttpMsg: "Server error."},
-        32: ErrResp{HttpCode: 400, HttpMsg: "Protocol error."},
-        33: ErrResp{HttpCode: 400, HttpMsg: "External service error."},
-        34: ErrResp{HttpCode: 400, HttpMsg: "Json error."},
-        40: ErrResp{HttpCode: 400, HttpMsg: "No account found."},
-        41: ErrResp{HttpCode: 400, HttpMsg: "Username already exists."},
+        31: ErrResp{HttpCode: 400, HttpMsg: "Protocol error."},
+        32: ErrResp{HttpCode: 400, HttpMsg: "Json error."},
+        40: ErrResp{HttpCode: 500, HttpMsg: "Database error."},
+        41: ErrResp{HttpCode: 500, HttpMsg: "Server error."},
+        42: ErrResp{HttpCode: 400, HttpMsg: "External service error."},
+        50: ErrResp{HttpCode: 400, HttpMsg: "No account found."},
+        51: ErrResp{HttpCode: 400, HttpMsg: "Username already exists."},
         99: ErrResp{HttpCode: 500, HttpMsg: "Unspecified error."},
     }
 }
