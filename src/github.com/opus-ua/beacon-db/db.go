@@ -43,7 +43,7 @@ func TestDB() *DBClient {
 		redis:   DevRedisDB(),
 		devMode: true,
 	}
-	db.TestingTable()
+	db.SelectTestingTable()
 	db.Flush()
 	AddDummy(db)
 	return db
@@ -132,6 +132,10 @@ func (db *DBClient) Flush() error {
 	return db.FlushRedis()
 }
 
-func (db *DBClient) TestingTable() error {
-	return db.TestingTableRedis()
+func (db *DBClient) SelectTestingTable() error {
+	return db.SelectTestingTableRedis()
+}
+
+func (db *DBClient) GetLocal(loc Geotag, radius float64) ([]Beacon, error) {
+    return db.GetLocalRedis(loc, radius)
 }

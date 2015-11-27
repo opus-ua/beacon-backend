@@ -140,7 +140,7 @@ func GetAuthenticationInfo(w http.ResponseWriter, r *http.Request) (int64, []byt
 func Authenticate(w http.ResponseWriter, r *http.Request, db *DBClient) (uint64, error) {
     userIDSigned, authKey, err := GetAuthenticationInfo(w, r)
     if err != nil {
-        return 0, err
+        return 0, WriteErrorResp(w, err.Error(), ProtocolError)
     }
     userID := uint64(userIDSigned)
     if authed, err := db.UserAuthenticated(userID, authKey); !authed || err != nil {
@@ -164,6 +164,7 @@ func HandlePostBeacon(w http.ResponseWriter, r *http.Request, db *DBClient) {
     ip := r.RemoteAddr
     userID, err := Authenticate(w, r, db)
     if err != nil {
+        WriteErrorResp(w, "Could not authenticate.", AuthenticationError)
         return
     }
     mediaType, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
@@ -257,6 +258,7 @@ func HandleGetBeacon(w http.ResponseWriter, r *http.Request, id uint64, db *DBCl
 func HandleHeartPost(w http.ResponseWriter, r *http.Request, id uint64, db *DBClient) {
     userID, err := Authenticate(w, r, db)
     if err != nil {
+        WriteErrorResp(w, err.Error(), AuthenticationError)
         return
     }
     err = db.HeartPost(id, userID)
@@ -270,6 +272,7 @@ func HandleHeartPost(w http.ResponseWriter, r *http.Request, id uint64, db *DBCl
 func HandleUnheartPost(w http.ResponseWriter, r *http.Request, id uint64, db *DBClient) {
     userID, err := Authenticate(w, r, db)
     if err != nil {
+        WriteErrorResp(w, err.Error(), AuthenticationError)
         return
     }
     err = db.UnheartPost(id, userID)
@@ -376,4 +379,70 @@ func HandleCreateAccount(w http.ResponseWriter, r *http.Request, googleID []stri
         return
     }
     io.WriteString(w, string(respJson))
+}
+
+func HandleGetLocal(w http.ResponseWriter, r *http.Request, db *DBClient) {
+    body, err := ioutil.ReadAll(r.Body)
+    if err != nil {
+        WriteErrorResp(w, err.Error(), ServerError)
+        return
+    }
+    var searchMsg LocalSearchMsg
+    err = json.Unmarshal(body, &searchMsg)
+    if err != nil {
+        WriteErrorResp(w, err.Error(), JsonError)
+        return
+    }
+    loc := Geotag{
+        Latitude: searchMsg.Latitude,
+        Longitude: searchMsg.Longitude,
+    }
+    beaconList, err := db.GetLocal(loc, searchMsg.Radius)
+    if err != nil {
+        WriteErrorResp(w, err.Error(), DatabaseError)
+        return
+    }
+    respMsg := LocalSearchRespMsg{}
+    for _, post := range beaconList {
+        nextPost := SubmitBeaconMsg{
+            SubmitPostMsg: SubmitPostMsg{
+                Id: post.ID,
+                Poster: post.PosterID,
+                Text: post.Description,
+            },
+            LocationMsg: LocationMsg{
+                Latitude: post.Location.Latitude,
+                Longitude: post.Location.Longitude,
+            },
+        }
+        respMsg.Beacons = append(respMsg.Beacons, nextPost)
+    }
+    respJson, err := json.Marshal(respMsg)
+    if err != nil {
+        WriteErrorResp(w, err.Error(), ServerError)
+        return
+    }
+    respBody := &bytes.Buffer{}
+    partWriter := multipart.NewWriter(respBody)
+    jsonHeader := textproto.MIMEHeader{}
+    jsonHeader.Add("Content-Type", "application/json")
+    jsonWriter, err := partWriter.CreatePart(jsonHeader)
+    if err != nil {
+        WriteErrorResp(w, err.Error(), ServerError)
+        return
+    }
+    jsonWriter.Write(respJson)
+    for _, post := range beaconList {
+        imgHeader := textproto.MIMEHeader{}
+        imgHeader.Add("Content-Type", "img/jpeg")
+        imgWriter, err := partWriter.CreatePart(imgHeader)
+        if err != nil {
+            WriteErrorResp(w, err.Error(), ServerError)
+            return
+        }
+        imgWriter.Write(post.Image)
+    }
+    partWriter.Close()
+    w.Header().Add("Content-Type", partWriter.FormDataContentType())
+    w.Write(respBody.Bytes())
 }

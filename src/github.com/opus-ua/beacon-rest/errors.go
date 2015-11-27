@@ -26,6 +26,7 @@ type ErrResp struct {
 const (
     ProtocolError = 31
     JsonError = 32
+    AuthenticationError = 33
     DatabaseError = 40
     ServerError = 41
     ExternalServiceError = 42
@@ -40,6 +41,7 @@ func init() {
     errorCodes = map[int]ErrResp{
         31: ErrResp{HttpCode: 400, HttpMsg: "Protocol error."},
         32: ErrResp{HttpCode: 400, HttpMsg: "Json error."},
+        33: ErrResp{HttpCode: 400, HttpMsg: "Authentication error."},
         40: ErrResp{HttpCode: 500, HttpMsg: "Database error."},
         41: ErrResp{HttpCode: 500, HttpMsg: "Server error."},
         42: ErrResp{HttpCode: 400, HttpMsg: "External service error."},

@@ -16,6 +16,7 @@ const (
 	REDIS_INT_BASE    = 10
 	USERNAME_POOL_KEY = "usernames"
 	USER_COUNT_KEY    = "user-count"
+    GEOTAG_KEY        = "geo"
 )
 
 func DefaultRedisDB() *redis.Client {
@@ -57,6 +58,13 @@ func GetRedisUserHeartedKey(postid uint64) string {
 
 func GetRedisUserFlaggedKey(postid uint64) string {
 	return fmt.Sprintf("f:%d", postid)
+}
+
+func RedisParseFloat64(res string, err error) (float64, error) {
+    if err != nil {
+        return 0.0, nil
+    }
+    return strconv.ParseFloat(res, 64)
 }
 
 func RedisParseUInt64(res string, err error) (uint64, error) {
@@ -200,15 +208,26 @@ func (db *DBClient) AddBeaconRedis(post *Beacon, userID uint64) (uint64, error) 
 	locBytes, _ := post.Location.MarshalBinary()
 	locString := string(locBytes[:])
 	now := time.Now().Format(time.UnixDate)
-	db.redis.HMSet(key, "img", string(post.Image[:]),
+    err = db.redis.HMSet(key, "img", string(post.Image[:]),
 		"loc", locString,
 		"poster", strconv.FormatUint(post.PosterID, REDIS_INT_BASE),
 		"desc", post.Description,
 		"hearts", strconv.FormatUint(uint64(post.Hearts), REDIS_INT_BASE),
 		"flags", strconv.FormatUint(uint64(post.Flags), REDIS_INT_BASE),
 		"time", now,
-		"type", "beacon")
+		"type", "beacon").Err()
+    if err != nil {
+        return 0, err
+    }
 	// db.redis.Expire(key, REDIS_EXPIRE)
+    err = db.redis.GeoAdd(GEOTAG_KEY, &redis.GeoLocation{
+        Name: strconv.FormatUint(uint64(postID), REDIS_INT_BASE),
+        Latitude: post.Location.Latitude,
+        Longitude: post.Location.Longitude,
+    }).Err()
+    if err != nil {
+        return 0, err
+    }
 	return post.ID, nil
 }
 
@@ -405,6 +424,38 @@ func (db *DBClient) FlushRedis() error {
 	return db.redis.FlushDb().Err()
 }
 
-func (db *DBClient) TestingTableRedis() error {
+func (db *DBClient) SelectTestingTableRedis() error {
 	return db.redis.Select(11).Err()
+}
+
+func (db *DBClient) GetLocalRedis(loc Geotag, radius float64) ([]Beacon, error) {
+    query := &redis.GeoRadiusQuery{
+        Key: GEOTAG_KEY,
+        Longitude: loc.Longitude,
+        Latitude: loc.Latitude,
+        Radius: radius,
+        Unit: "mi",
+        WithDistance: false,
+        WithCoordinates: false,
+        WithGeoHash: false,
+        Count: -1,
+        Sort: "",
+    }
+    res, err := db.redis.GeoRadius(query).Result()
+    if err != nil {
+        return []Beacon{}, err
+    }
+    var resPosts []Beacon
+    for _, place := range res {
+        idSigned, err := strconv.ParseInt(place.Name, REDIS_INT_BASE, 64)
+        if err != nil {
+            return resPosts, err
+        }
+        nextLoc, err := db.GetBeaconRedis(uint64(idSigned))
+        if err != nil {
+            return resPosts, err
+        }
+        resPosts = append(resPosts, nextLoc)
+    }
+    return resPosts, nil
 }

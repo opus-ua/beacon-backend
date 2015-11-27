@@ -864,6 +864,7 @@ func AddDummy(db *DBClient) {
 		id, err := db.AddBeacon(&beacon, 1337)
 		if err != nil {
 			log.Printf("Could not add dummy to database.")
+            log.Printf(err.Error())
 			os.Exit(1)
 		}
 		commentA := Comment{

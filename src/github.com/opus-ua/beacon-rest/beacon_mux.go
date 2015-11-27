@@ -27,6 +27,7 @@ func NewBeaconServer(dev bool, testing bool, version VersionInfo, auth []string)
     bs.HandleVersion("/version")
     bs.HandleAuth("/createaccount", "POST", HandleCreateAccount)
     bs.HandlePost("/beacon", HandlePostBeacon)
+    bs.HandlePost("/local", HandleGetLocal)
     bs.HandleIntParam("/beacon/", "GET", HandleGetBeacon)
     bs.HandleIntParam("/heart/", "POST", HandleHeartPost)
     bs.HandleIntParam("/unheart/", "POST", HandleUnheartPost)
@@ -48,7 +49,7 @@ func (bm *BeaconServer) Start(port uint) error {
 }
 
 func (bm *BeaconServer) TestingMode() error {
-    return bm.db.TestingTable()
+    return bm.db.SelectTestingTable()
 }
 
 func (bm *BeaconServer) HandleMethod(uri string, method string, handler BeaconHandler) {

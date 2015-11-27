@@ -1,7 +1,5 @@
 package beaconrest
 
-
-
 type SubmitPostMsg struct {
     Id           uint64 `json:"id"`
     Poster       uint64 `json:"userid"`
@@ -16,8 +14,8 @@ type RespPostMsg struct {
 }
 
 type LocationMsg struct {
-    Latitude     float64 `json:"longitude"`
-    Longitude    float64 `json:"latitude"`
+    Latitude     float64 `json:"latitude"`
+    Longitude    float64 `json:"longitude"`
 }
 
 type SubmitBeaconMsg struct {
@@ -58,4 +56,14 @@ type GoogleAuthRespMsg struct {
     Aud string `json:"aud"`
     Iat string `json:"iat"`
     Exp string `json:"exp"`
+}
+
+type LocalSearchMsg struct {
+    Latitude float64 `json:"latitude"`
+    Longitude float64 `json:"longitude"`
+    Radius float64 `json:"radius"`
+}
+
+type LocalSearchRespMsg struct {
+    Beacons []SubmitBeaconMsg `json:"beacons"`
 }
