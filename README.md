@@ -182,6 +182,65 @@ Content-Type: application/json
 }
 ```
 
+## Getting Local Beacons
+The endpoint ```/local``` is used to retrieve beacons posted within
+a radius of a given set of GPS coordinates. To use it, simply use
+the following HTTP. (note that BasicAuth is not required)
+
+```http
+POST /local
+Content-Type: application/json
+
+{
+    "latitude": 33.219,
+    "longitude": -87.544,
+    "radius": 1.0
+}
+```
+
+The radius should be given in miles. In response, you should get the
+the following:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: multipart/form-data; boundary=793d63336
+
+--793d63336
+Content-Type: application/json
+
+{
+    beacons: [
+        {
+            "id": 1,
+            "userid": 10,
+            "text": "First ever post! Whoo!"
+            "latitude": 33.218,
+            "longitude": -87.544
+        },
+        {
+            "id": 2,
+            "userid": 11,
+            "text": "Second ever post! Whoo!"
+            "latitude": 33.219,
+            "longitude": -87.543
+        }
+    ]
+}
+
+--793d63336
+Content-Type: image/jpeg
+
+<BINARY_IMAGE_DATA_FOR_POST_1>
+
+--793d63336
+Content-Type: image/jpeg
+
+<BINARY_IMAGE_DATA_FOR_POST_2>
+```
+
+The order of images parts following the json is the same as the
+order of posts within the json.
+
 ## General Errors
 If any error condition is met while a request is being served, a
 response similar to the following will be returned.
