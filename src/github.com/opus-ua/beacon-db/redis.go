@@ -430,18 +430,15 @@ func (db *DBClient) SelectTestingTableRedis() error {
 
 func (db *DBClient) GetLocalRedis(loc Geotag, radius float64) ([]Beacon, error) {
     query := &redis.GeoRadiusQuery{
-        Key: GEOTAG_KEY,
-        Longitude: loc.Longitude,
-        Latitude: loc.Latitude,
         Radius: radius,
         Unit: "mi",
-        WithDistance: false,
-        WithCoordinates: false,
+        WithDist: false,
+        WithCoord: false,
         WithGeoHash: false,
         Count: -1,
         Sort: "",
     }
-    res, err := db.redis.GeoRadius(query).Result()
+    res, err := db.redis.GeoRadius(GEOTAG_KEY, loc.Longitude, loc.Latitude, query).Result()
     if err != nil {
         return []Beacon{}, err
     }
