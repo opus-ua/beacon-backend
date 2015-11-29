@@ -286,6 +286,7 @@ func HandleUnheartPost(w http.ResponseWriter, r *http.Request, id uint64, db *DB
 func HandleFlagPost(w http.ResponseWriter, r *http.Request, id uint64, db *DBClient) {
     userID, err := Authenticate(w, r, db)
     if err != nil {
+        WriteErrorResp(w, err.Error(), AuthenticationError)
         return
     }
     err = db.FlagPost(id, userID)
@@ -445,4 +446,35 @@ func HandleGetLocal(w http.ResponseWriter, r *http.Request, db *DBClient) {
     partWriter.Close()
     w.Header().Add("Content-Type", partWriter.FormDataContentType())
     w.Write(respBody.Bytes())
+}
+
+
+func HandlePostComment(w http.ResponseWriter, r *http.Request, db *DBClient) {
+    userID, err := Authenticate(w, r, db)
+    if err != nil {
+        WriteErrorResp(w, err.Error(), AuthenticationError)
+        return
+    }
+    body, err := ioutil.ReadAll(r.Body)
+    if err != nil {
+        WriteErrorResp(w, err.Error(), ServerError)
+        return
+    }
+    var commentMsg PostCommentMsg
+    err = json.Unmarshal(body, &commentMsg)
+    if err != nil {
+        WriteErrorResp(w, err.Error(), JsonError)
+        return
+    }
+    comment := Comment{
+        PosterID: userID,
+        BeaconID: commentMsg.BeaconID,
+        Text: commentMsg.Text,
+    }
+    db.AddComment(&comment, userID)
+    if err != nil {
+        WriteErrorResp(w, err.Error(), DatabaseError)
+        return
+    }
+    w.WriteHeader(200)
 }

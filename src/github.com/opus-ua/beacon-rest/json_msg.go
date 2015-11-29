@@ -67,3 +67,8 @@ type LocalSearchMsg struct {
 type LocalSearchRespMsg struct {
     Beacons []SubmitBeaconMsg `json:"beacons"`
 }
+
+type PostCommentMsg struct {
+    BeaconID    uint64 `json:"beaconid"`
+    Text        string `json:"text"`
+}
