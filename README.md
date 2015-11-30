@@ -42,22 +42,10 @@ HTTP/1.1 200 OK
 Content-Type: application/json
 
 {
-    "id": 525600,
-    "userid": 24601,
-    "username": "Jean Valjean",
-    "text": "Who am I?",
-    "latitude": 45.0,
-    "longitude": 45.0,
-    "time": "Sat Nov. 7 21:13:33 CST 2015"
+    "id": 525600
 }
 ```
-The response is not multi-part and will be identical
-to the supplied JSON, but with a post ID and time
-posted added.
-
-Note that in the future, once users have been fully
-implemented, a username will be returned along with
-all user IDs.
+The response is simply the id of the newly created beacon.
 
 ## Retrieving a Beacon
 
@@ -84,7 +72,7 @@ Content-Type: application/json
 {
     "id": 1,
     "userid": 24601,
-    "username": "Jean Valjean"
+    "username": "Jean Valjean",
     "text": "Who am I?",
     "hearts": 1,
     "latitude": 45.0,

@@ -202,15 +202,7 @@ func HandlePostBeacon(w http.ResponseWriter, r *http.Request, db *DBClient) {
         WriteErrorResp(w, err.Error(), DatabaseError)
         return
     }
-    postedBeacon, err := db.GetThread(id)
-    if err != nil {
-        WriteErrorResp(w, err.Error(), DatabaseError)
-        return
-    }
-    respBeaconMsg, err := ToRespBeaconMsg(w, postedBeacon, int64(userID), db)
-    if err != nil {
-        return
-    }
+    respBeaconMsg := PostID{ID: id}
     respJson, err := json.Marshal(respBeaconMsg)
     if err != nil {
         WriteErrorResp(w, err.Error(), JsonError)

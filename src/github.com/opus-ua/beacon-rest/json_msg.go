@@ -72,3 +72,7 @@ type PostCommentMsg struct {
     BeaconID    uint64 `json:"beaconid"`
     Text        string `json:"text"`
 }
+
+type PostID struct {
+    ID          uint64 `json:"id"`
+}
