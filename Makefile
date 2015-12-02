@@ -13,6 +13,7 @@ LDFLAGS=-X main.version=$(VERSION_NUMBER) -X main.gitHash=$(HASH) -X main.releas
 bin/beacon: $(SRC)
 	mkdir -p bin
 	GOPATH=$(GOPATH) go get gopkg.in/redis.v3
+	GOPATH=$(GOPATH) go get github.com/nfnt/resize 
 	GOPATH=$(GOPATH) go install -v -ldflags "$(LDFLAGS)"  github.com/opus-ua/beacon
 
 .PHONY: test

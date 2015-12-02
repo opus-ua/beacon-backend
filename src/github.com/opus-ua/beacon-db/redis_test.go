@@ -49,6 +49,7 @@ func RedisNotNil(res *redis.StringCmd, t *testing.T) {
 
 var p Beacon = Beacon{
 	Image:       []byte("abcde"),
+	Thumbnail:   []byte("abcde"),
 	Location:    Geotag{Latitude: 45.0, Longitude: 45.0},
 	PosterID:    54321,
 	Description: "Go go Redis!",

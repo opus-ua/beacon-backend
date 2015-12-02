@@ -3,4 +3,5 @@ bin/
 *.sw*
 todo.txt
 src/gopkg.in/
+src/github.com/nfnt
 google.id

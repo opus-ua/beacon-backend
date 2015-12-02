@@ -197,6 +197,11 @@ func HandlePostBeacon(w http.ResponseWriter, r *http.Request, db *DBClient) {
         return
     }
     post.Image = img
+    post.Thumbnail, err = MakeThumbnail(img)
+    if err != nil {
+        WriteErrorResp(w, err.Error(), ServerError)
+        return
+    }
     id, err := db.AddBeacon(&post, userID)
     if err != nil {
         WriteErrorResp(w, err.Error(), DatabaseError)
@@ -433,7 +438,7 @@ func HandleGetLocal(w http.ResponseWriter, r *http.Request, db *DBClient) {
             WriteErrorResp(w, err.Error(), ServerError)
             return
         }
-        imgWriter.Write(post.Image)
+        imgWriter.Write(post.Thumbnail)
     }
     partWriter.Close()
     w.Header().Add("Content-Type", partWriter.FormDataContentType())

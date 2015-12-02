@@ -852,7 +852,8 @@ func AddDummy(db *DBClient) {
 			os.Exit(1)
 		}
 		beacon := Beacon{
-			Image: imgBytes,
+			Image:     imgBytes,
+			Thumbnail: imgBytes,
 			Location: Geotag{
 				Latitude:  33.219,
 				Longitude: -87.544,
@@ -864,7 +865,7 @@ func AddDummy(db *DBClient) {
 		id, err := db.AddBeacon(&beacon, 1337)
 		if err != nil {
 			log.Printf("Could not add dummy to database.")
-            log.Printf(err.Error())
+			log.Printf(err.Error())
 			os.Exit(1)
 		}
 		commentA := Comment{

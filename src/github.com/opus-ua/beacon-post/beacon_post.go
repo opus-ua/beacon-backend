@@ -7,6 +7,7 @@ import (
 type Beacon struct {
 	ID          uint64
 	Image       []byte
+	Thumbnail   []byte
 	Location    Geotag
 	PosterID    uint64
 	Description string
@@ -14,16 +15,6 @@ type Beacon struct {
 	Flags       uint32
 	Time        time.Time
 	Comments    []Comment
-}
-
-type BeaconThumb struct {
-	ID          uint64
-	Thumb       []byte
-	Location    Geotag
-	PosterID    uint64
-	Description string
-	Hearts      uint32
-	Time        time.Time
 }
 
 type Comment struct {
