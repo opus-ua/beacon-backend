@@ -22,6 +22,7 @@ type ApacheLogRecord struct {
     status int
     responseBytes int64
     elapsedTime time.Duration
+    userAgent string
 }
 
 func (r *ApacheLogRecord) Log() {
@@ -32,8 +33,8 @@ func (r *ApacheLogRecord) Log() {
         timeInt = r.elapsedTime.Nanoseconds() / int64(time.Microsecond)
         timeStr = fmt.Sprintf("%sμs", strconv.FormatInt(timeInt, 10))
     }
-    ApacheFormatPattern := "%s \"%s %d %d bytes\" %s\n"
-    log.Printf(ApacheFormatPattern, r.ip, requestLine,
+    ApacheFormatPattern := "%s \"%s\" \"%s %d %d bytes\" %s\n"
+    log.Printf(ApacheFormatPattern, r.ip, r.userAgent, requestLine,
                 r.status, r.responseBytes, timeStr)
 }
 
@@ -73,6 +74,7 @@ func (h *ApacheLoggingHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request
         protocol: r.Proto,
         status: http.StatusOK,
         elapsedTime: time.Duration(0),
+        userAgent: r.UserAgent(),
     }
 
     startTime := time.Now()
