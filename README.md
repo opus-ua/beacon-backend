@@ -1,3 +1,21 @@
+Beacon is a an open-source social network and accompanying Android app that
+allows you to anonymously share interesting things and events with people in
+your local community. Beacon is still in active development, but when finished,
+using Beacon will be something like this:
+
+Users take a picture in-app. Beacon takes a geotag and posts it on the map.
+Beacons that are more popular are indicated on the map. You can select a beacon
+to see what people are saying about it and to add your own comment.
+
+A video demonstrating the current functionality can be found
+[here](https://www.youtube.com/watch?v=KVeSS2WxJBo).
+
+Binaries can be downloaded [here](http://bin.gnossen.com/beacon-backend/).
+
+Beacon was started as a university project and as such, is not currently open
+for pull requests. In January 2016, however, Beacon will become open for
+contributions.
+
 Please bear in mind that this document is under heavy
 construction and is likely to change often and greatly.
 The beacon backend provides the following endpoints.
