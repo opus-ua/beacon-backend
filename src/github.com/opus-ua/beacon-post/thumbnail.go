@@ -7,8 +7,8 @@ import (
 	"image/jpeg"
 )
 
-const maxWidth uint = 100
-const maxHeight uint = 150
+const maxWidth uint = 200
+const maxHeight uint = 300
 
 func MakeThumbnail(data []byte) ([]byte, error) {
 	img, _, err := image.Decode(bytes.NewReader(data))

@@ -87,7 +87,11 @@ func RedisParseTime(res string, err error) (time.Time, error) {
 	if err != nil {
 		return time.Now(), err
 	}
-	return time.Parse(time.UnixDate, res)
+	seconds, err := strconv.ParseInt(res, 10, 64)
+	if err != nil {
+		return time.Now(), err
+	}
+	return time.Unix(seconds, 0), nil
 }
 
 func RedisParseText(res string, obj encoding.TextUnmarshaler, err error) error {
@@ -104,6 +108,10 @@ func RedisParseBinary(res string, obj encoding.BinaryUnmarshaler, err error) err
 	}
 	err = obj.UnmarshalBinary([]byte(res))
 	return err
+}
+
+func RedisFormatTime(t time.Time) string {
+	return strconv.FormatInt(t.Unix(), 10)
 }
 
 func (db *DBClient) GetBeaconRedis(id uint64) (Beacon, error) {
@@ -208,7 +216,7 @@ func (db *DBClient) AddBeaconRedis(post *Beacon, userID uint64) (uint64, error) 
 	key := GetRedisPostKey(post.ID)
 	locBytes, _ := post.Location.MarshalBinary()
 	locString := string(locBytes[:])
-	now := time.Now().Format(time.UnixDate)
+	now := RedisFormatTime(time.Now())
 	err = db.redis.HMSet(key, "img", string(post.Image[:]),
 		"thumb", string(post.Thumbnail[:]),
 		"loc", locString,
@@ -246,7 +254,7 @@ func (db *DBClient) AddCommentRedis(comment *Comment, userID uint64) error {
 	IDKey := GetRedisCommentListKey(comment.BeaconID)
 	db.redis.RPush(IDKey, strconv.FormatUint(comment.ID, REDIS_INT_BASE))
 	commKey := GetRedisPostKey(comment.ID)
-	now := time.Now().Format(time.UnixDate)
+	now := RedisFormatTime(time.Now())
 	db.redis.HMSet(commKey, "poster", strconv.FormatUint(comment.PosterID, REDIS_INT_BASE),
 		"parent", strconv.FormatUint(comment.BeaconID, REDIS_INT_BASE),
 		"text", comment.Text,
@@ -348,7 +356,7 @@ func (db *DBClient) AddUserRedis(username string, authkey []byte, email string) 
 
 func (db *DBClient) SetUserRedis(userID uint64, username string, authkey []byte, email string) error {
 	userKey := GetRedisUserKey(userID)
-	now := time.Now().Format(time.UnixDate)
+	now := RedisFormatTime(time.Now())
 	res := db.redis.HMSet(userKey, "id", strconv.FormatUint(userID, REDIS_INT_BASE),
 		"username", username,
 		"created", now,
@@ -457,4 +465,21 @@ func (db *DBClient) GetLocalRedis(loc Geotag, radius float64) ([]Beacon, error) 
 		resPosts = append(resPosts, nextLoc)
 	}
 	return resPosts, nil
+}
+
+func (db *DBClient) GetCommentCountRedis(postID uint64) (uint64, error) {
+	postKey := GetRedisPostKey(postID)
+	postType, err := db.redis.HGet(postKey, "type").Result()
+	if err != nil {
+		return 0, err
+	}
+	if postType != "beacon" {
+		return 0, errors.New("Cannot get comment count of non-beacon post.")
+	}
+	commentsKey := GetRedisCommentListKey(postID)
+	count, err := db.redis.LLen(commentsKey).Result()
+	if err != nil {
+		return 0, err
+	}
+	return uint64(count), nil
 }
