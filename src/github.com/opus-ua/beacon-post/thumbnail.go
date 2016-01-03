@@ -15,7 +15,7 @@ func MakeThumbnail(data []byte) ([]byte, error) {
 	if err != nil {
 		return []byte{}, err
 	}
-	thumb := resize.Resize(maxWidth, maxHeight, img, resize.Lanczos3)
+	thumb := resize.Thumbnail(maxWidth, maxHeight, img, resize.Lanczos3)
 	buf := new(bytes.Buffer)
 	err = jpeg.Encode(buf, thumb, nil)
 	if err != nil {
