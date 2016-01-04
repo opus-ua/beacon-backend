@@ -95,7 +95,7 @@ Content-Type: application/json
     "hearts": 1,
     "latitude": 45.0,
     "longitude": 45.0,
-    "time": "Sat Nov. 7 21:13:22 CST 2015",
+    "time": 14780923409,
     "hearted": true,
     "comments": [
         {
@@ -103,7 +103,7 @@ Content-Type: application/json
             "user": 54321,
             "text": "This post is bad and you should feel bad.",
             "hearts": 7,
-            "time": "Sat Nov. 7 21:13:33 CST 2015",
+            "time": 14780923409,
             "hearted": false,
         },
         {
@@ -111,7 +111,7 @@ Content-Type: application/json
             "user": 12345,
             "text": "No, people. Let's be smart and bring it off.",
             "hearts": 5,
-            "time": "Sat Nov. 7 21:13:57 CST 2015",
+            "time": 14780923409,
             "hearted": false,
         }
     ]
@@ -219,14 +219,14 @@ Content-Type: application/json
         {
             "id": 1,
             "userid": 10,
-            "text": "First ever post! Whoo!"
+            "text": "First ever post! Whoo!",
             "latitude": 33.218,
             "longitude": -87.544
         },
         {
             "id": 2,
             "userid": 11,
-            "text": "Second ever post! Whoo!"
+            "text": "Second ever post! Whoo!",
             "latitude": 33.219,
             "longitude": -87.543
         }

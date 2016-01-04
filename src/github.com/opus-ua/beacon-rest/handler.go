@@ -23,6 +23,10 @@ const (
     MAX_IMG_BYTES = 1 << 22
 )
 
+func FormatTime(t time.Time) int64 {
+    return t.Unix()
+}
+
 func ParsePostBeaconJson(w http.ResponseWriter, part *multipart.Part, ip string) (Beacon, error) {
     jsonBytes, err := ioutil.ReadAll(part)
     if err != nil {
@@ -73,7 +77,7 @@ func ToRespCommentMsg(w http.ResponseWriter, comment Comment, viewerID int64, db
         },
         RespPostMsg: RespPostMsg{
             Hearts: comment.Hearts,
-            Time:   comment.Time.Format(time.UnixDate),
+            Time:   FormatTime(comment.Time),
             Username: username,
             Hearted: hearted,
         },
@@ -116,7 +120,7 @@ func ToRespBeaconMsg(w http.ResponseWriter, beacon Beacon, viewerID int64, db *D
         },
         RespPostMsg: RespPostMsg{
             Hearts:     beacon.Hearts,
-            Time:       beacon.Time.Format(time.UnixDate),
+            Time:       FormatTime(beacon.Time),
             Username:   username,
             Hearted:    hearted,
         },
@@ -380,6 +384,11 @@ func HandleCreateAccount(w http.ResponseWriter, r *http.Request, googleID []stri
 }
 
 func HandleGetLocal(w http.ResponseWriter, r *http.Request, db *DBClient) {
+    viewerID, err := OptionalAuthenticate(w, r, db)
+    if err != nil {
+        WriteErrorResp(w, err.Error(), DatabaseError)
+        return
+    }
     body, err := ioutil.ReadAll(r.Body)
     if err != nil {
         WriteErrorResp(w, err.Error(), ServerError)
@@ -402,16 +411,45 @@ func HandleGetLocal(w http.ResponseWriter, r *http.Request, db *DBClient) {
     }
     respMsg := LocalSearchRespMsg{}
     for _, post := range beaconList {
-        nextPost := SubmitBeaconMsg{
-            SubmitPostMsg: SubmitPostMsg{
-                Id: post.ID,
-                Poster: post.PosterID,
-                Text: post.Description,
+        username, err := db.GetUsername(post.PosterID)
+        if err != nil {
+            WriteErrorResp(w, err.Error(), DatabaseError)
+            return
+        }
+        var hearted bool
+        if viewerID >= 0 {
+            hearted, err = db.HasHearted(post.ID, uint64(viewerID))
+            if err != nil {
+                WriteErrorResp(w, err.Error(), DatabaseError)
+                return
+            }
+        } else {
+            hearted = false
+        }
+        commentCount, err := db.GetCommentCount(post.ID)
+        if err != nil {
+            WriteErrorResp(w, err.Error(), DatabaseError)
+            return
+        }
+        nextPost := RespThumbnailMsg{
+            SubmitBeaconMsg: SubmitBeaconMsg{
+                SubmitPostMsg: SubmitPostMsg{
+                    Id: post.ID,
+                    Poster: post.PosterID,
+                    Text: post.Description,
+                },
+                LocationMsg: LocationMsg{
+                    Latitude: post.Location.Latitude,
+                    Longitude: post.Location.Longitude,
+                },
             },
-            LocationMsg: LocationMsg{
-                Latitude: post.Location.Latitude,
-                Longitude: post.Location.Longitude,
+            RespPostMsg: RespPostMsg{
+                Hearts: post.Hearts,
+                Time: FormatTime(post.Time),
+                Username: username,
+                Hearted: hearted,
             },
+            CommentCount: commentCount,
         }
         respMsg.Beacons = append(respMsg.Beacons, nextPost)
     }

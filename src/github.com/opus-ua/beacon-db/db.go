@@ -139,3 +139,7 @@ func (db *DBClient) SelectTestingTable() error {
 func (db *DBClient) GetLocal(loc Geotag, radius float64) ([]Beacon, error) {
 	return db.GetLocalRedis(loc, radius)
 }
+
+func (db *DBClient) GetCommentCount(postID uint64) (uint64, error) {
+	return db.GetCommentCountRedis(postID)
+}

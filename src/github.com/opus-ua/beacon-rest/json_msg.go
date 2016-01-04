@@ -8,7 +8,7 @@ type SubmitPostMsg struct {
 
 type RespPostMsg struct {
     Hearts      uint32 `json:"hearts"`
-    Time        string `json:"time"`
+    Time        int64  `json:"time"`
     Username    string `json:"username"`
     Hearted     bool   `json:"hearted"`
 }
@@ -34,6 +34,12 @@ type RespBeaconMsg struct {
     SubmitBeaconMsg
     RespPostMsg
     Comments    []RespCommentMsg `json:"comments"`
+}
+
+type RespThumbnailMsg struct {
+    SubmitBeaconMsg
+    RespPostMsg
+    CommentCount uint64 `json:"comments"`
 }
 
 type CreateAccountReqMsg struct {
@@ -65,7 +71,7 @@ type LocalSearchMsg struct {
 }
 
 type LocalSearchRespMsg struct {
-    Beacons []SubmitBeaconMsg `json:"beacons"`
+    Beacons []RespThumbnailMsg `json:"beacons"`
 }
 
 type PostCommentMsg struct {
